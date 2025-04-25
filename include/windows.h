@@ -16,6 +16,15 @@ typedef struct {
     size_t option_count;
 } MenuData;
 
+typedef struct {
+    char* text;
+    size_t text_len;
+} ViewerData;
+
+typedef struct {
+    int* loop;
+} InputContext;
+
 struct ViewManager;
 
 typedef struct Win{
@@ -29,8 +38,9 @@ typedef struct Win{
     size_t keypress;
     size_t highlight;
     void (*draw)(struct Win*);
-    void (*handle_input)(struct ViewManager*, struct Win**, int* loop);
+    void (*handle_input)(struct ViewManager*, struct Win**, void* context);
     void* userdata;
+    bool dirty;
 } Win;
 
 typedef struct ViewManager{
@@ -53,27 +63,31 @@ Win* Win_init(
 
 void Win_delete(Win** winptr);
 
-void Win_draw(Win* winptr);
-
 /***********************************/
 /********DRAWING FUNCTIONS**********/
 /***********************************/
 
+void Win_draw(Win* winptr);
+
 void Win_menu_draw(Win* winptr);
+
+void Win_viewer_draw(Win* winptr);
 
 /***********************************/
 /*****INPUT HANDLING FUNCTIONS******/
 /***********************************/
 
-void Handle_input_menu_main(struct ViewManager* vm, struct Win** winptr, int* loop);
+void Handle_input_menu_main(struct ViewManager* vm, struct Win** winptr, void* context);
 
-void Handle_input_menu_accounts(struct ViewManager* vm, struct Win** winptr, int* loop);
+void Handle_input_menu_accounts(struct ViewManager* vm, struct Win** winptr, void* context);
 
-void Handle_input_menu_transactions(struct ViewManager* vm, struct Win** winptr, int* loop);
+void Handle_input_menu_transactions(struct ViewManager* vm, struct Win** winptr, void* context);
 
-void Handle_input_menu_currencies(struct ViewManager* vm, struct Win** winptr, int* loop);
+void Handle_input_menu_currencies(struct ViewManager* vm, struct Win** winptr, void* context);
 
-void Handle_input_menu_transaction_categories(struct ViewManager* vm, struct Win** winptr, int* loop);
+void Handle_input_menu_transaction_categories(struct ViewManager* vm, struct Win** winptr, void* context);
+
+void Handle_input_viewer(struct ViewManager* vm, struct Win** winptr, void* context);
 
 /***********************************/
 /*******SPAWNING FUNCTIONS**********/
@@ -111,7 +125,7 @@ void ViewManager_redraw_all(ViewManager* vm);
 
 void ViewManager_destroy(ViewManager** vm);
 
-void ViewManager_listen(ViewManager* vm);
+void ViewManager_listen(ViewManager* vm, InputContext* ctx);
 
 void ViewManager_push_menu(ViewManager* vm, Win* menu);
 

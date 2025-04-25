@@ -56,7 +56,17 @@ void Win_delete(Win** winptr){
         return;
     }
 
-    if((*winptr)->userdata) free((*winptr)->userdata);
+    if((*winptr)->userdata) {
+        if((*winptr)->role == WIN_ROLE_MENU){
+            free((*winptr)->userdata);
+            (*winptr)->userdata = NULL;
+        }else if((*winptr)->role == WIN_ROLE_VIEWER){
+            ViewerData* wd = (ViewerData*)(*winptr)->userdata;
+            if(wd->text) free(wd->text);
+            free((*winptr)->userdata);
+            (*winptr)->userdata = NULL;
+        }
+    }
 
     free(*winptr);
     *winptr = NULL;
@@ -64,25 +74,23 @@ void Win_delete(Win** winptr){
     log_message("Win_delete: OK.");
 }
 
+/***********************************/
+/********DRAWING FUNCTIONS**********/
+/***********************************/
+
 void Win_draw(Win* winptr){
     if(winptr->label) log_message("Win_draw: drawing window with label '%s'.", winptr->label);
     else              log_message("Win_draw: drawing window with anonymous label.");
 
     box(winptr->windowptr, 0, 0);
     if(winptr->label != NULL) mvwprintw(winptr->windowptr, 0, 2, winptr->label);
-    wrefresh(winptr->windowptr);
 
     log_message("Win_draw: OK.");
 }
 
-/***********************************/
-/********DRAWING FUNCTIONS**********/
-/***********************************/
-
 void Win_menu_draw(Win* winptr){
     MenuData* m = (MenuData*)winptr->userdata;
 
-    werase(winptr->windowptr);
     box(winptr->windowptr, 0, 0);
     if (winptr->label != NULL) mvwprintw(winptr->windowptr, 0, 2, winptr->label);
 
@@ -97,25 +105,51 @@ void Win_menu_draw(Win* winptr){
     if(n-1 == winptr->highlight) wattron(winptr->windowptr, A_REVERSE);
     mvwprintw(winptr->windowptr, winptr->height-3, (APP_SIDE_WIDTH - strlen(m->options[n-1])) / 2, m->options[n-1]);
     wattroff(winptr->windowptr, A_REVERSE);
+}
 
-    wrefresh(winptr->windowptr);
+void draw_viewer_background(WINDOW* win, int lines, int cols) {
+    for (int y = 0; y < lines; ++y) {
+        int pair = (y % 2 == 0) ? COLOR_PAIR(1) : COLOR_PAIR(2);
+        wattron(win, pair);
+        mvwhline(win, y, 0, ' ', cols);
+        wattroff(win, pair);
+    }
+}
+
+void Win_viewer_draw(Win* winptr){
+    werase(winptr->windowptr);
+    draw_viewer_background(winptr->windowptr, winptr->height, winptr->width);
+    box(winptr->windowptr, 0, 0);
+    if(winptr->label != NULL) mvwprintw(winptr->windowptr, 0, 2, winptr->label);
+    ViewerData* wd = (ViewerData*)(winptr->userdata);
+    mvwprintw(winptr->windowptr, 2, 2, wd->text);
 }
 
 /***********************************/
 /*****INPUT HANDLING FUNCTIONS******/
 /***********************************/
 
-void Handle_input_menu_main(struct ViewManager* vm, struct Win** winptr, int* loop){
+void Handle_input_menu_main(struct ViewManager* vm, struct Win** winptr, void* context){
     MenuData* data = (MenuData*)(*winptr)->userdata;
     if(!data) return;
+    InputContext* ctx = (InputContext*)context;
 
     switch((*winptr)->keypress){
         case KEY_UP:
             if((*winptr)->highlight > 0) --((*winptr)->highlight);
+            (*winptr)->dirty = TRUE;
             break;
         case KEY_DOWN:
             if((*winptr)->highlight < data->option_count - 1) ++((*winptr)->highlight);
+            (*winptr)->dirty = TRUE;
             break;
+        case KEY_RIGHT: {
+            // shift focus to viewer window
+            ViewManager_focus(vm, WIN_ROLE_VIEWER);
+            // (*winptr)->dirty = TRUE;
+            *winptr = vm->windows[vm->focused];
+            break;
+        }
         case ENTER:
             switch((*winptr)->highlight){
                 // each of these cases should shift the focus in ViewManager* vm
@@ -167,13 +201,14 @@ void Handle_input_menu_main(struct ViewManager* vm, struct Win** winptr, int* lo
                     // options
                     Win* wPopup = Win_popup("Not implemented!", "| [!] Error |", (__yMax-5)/2, (__xMax-10)/2);
                     Win_draw(wPopup);
+                    wrefresh(wPopup->windowptr);
                     getch();
                     Win_delete(&wPopup);
                     ViewManager_redraw_all(vm);
                     break;
                 }
                 case 5:
-                    *loop = 0;
+                    *(ctx->loop) = 0;
                     break;
                 default:
                     break;
@@ -182,43 +217,38 @@ void Handle_input_menu_main(struct ViewManager* vm, struct Win** winptr, int* lo
     }
 }
 
-void Handle_input_menu_accounts(struct ViewManager* vm, struct Win** winptr, int* loop){
+void Handle_input_menu_accounts(struct ViewManager* vm, struct Win** winptr, void* context){
+    (void)context;
     MenuData* data = (MenuData*)(*winptr)->userdata;
     if(!data) return;
 
     switch((*winptr)->keypress){
         case KEY_UP:
             if((*winptr)->highlight > 0) --((*winptr)->highlight);
+            (*winptr)->dirty = TRUE;
             break;
         case KEY_DOWN:
             if((*winptr)->highlight < data->option_count - 1) ++((*winptr)->highlight);
+            (*winptr)->dirty = TRUE;
             break;
+        case KEY_RIGHT: {
+            // shift focus to viewer window
+            ViewManager_focus(vm, WIN_ROLE_VIEWER);
+            // (*winptr)->dirty = TRUE;
+            *winptr = vm->windows[vm->focused];
+            break;
+        }
         case ENTER:
             switch((*winptr)->highlight){
-                case 0: {
-                    // create account
-                    Win* wViewer = vm->windows[WIN_ROLE_VIEWER];
-                    werase(wViewer->windowptr);
-                    mvwprintw(wViewer->windowptr, 2, 2, "Create account");
-                    wViewer->draw(wViewer);
+                // create account
+                case 0:
                     break;
-                }
-                case 1: {
-                    // search account
-                    Win* wViewer = vm->windows[WIN_ROLE_VIEWER];
-                    werase(wViewer->windowptr);
-                    mvwprintw(wViewer->windowptr, 2, 2, "Search account");
-                    wViewer->draw(wViewer);
+                // search account
+                case 1:
                     break;
-                }
-                case 2: {
-                    // delete account
-                    Win* wViewer = vm->windows[WIN_ROLE_VIEWER];
-                    werase(wViewer->windowptr);
-                    mvwprintw(wViewer->windowptr, 2, 2, "Delete account");
-                    wViewer->draw(wViewer);
+                // delete account
+                case 2:
                     break;
-                }
                 case 3: {
                     Win* wPrevMenu = ViewManager_pop_menu(vm);
                     ViewManager_set(vm, WIN_ROLE_MENU, wPrevMenu);
@@ -233,35 +263,32 @@ void Handle_input_menu_accounts(struct ViewManager* vm, struct Win** winptr, int
     }
 }
 
-void Handle_input_menu_transactions(struct ViewManager* vm, struct Win** winptr, int* loop){
+void Handle_input_menu_transactions(struct ViewManager* vm, struct Win** winptr, void* context){
+    (void)context;
     MenuData* data = (MenuData*)(*winptr)->userdata;
     if(!data) return;
 
     switch((*winptr)->keypress){
         case KEY_UP:
             if((*winptr)->highlight > 0) --((*winptr)->highlight);
+            (*winptr)->dirty = TRUE;
             break;
         case KEY_DOWN:
             if((*winptr)->highlight < data->option_count - 1) ++((*winptr)->highlight);
+            (*winptr)->dirty = TRUE;
             break;
+        case KEY_RIGHT: {
+            // shift focus to viewer window
+            ViewManager_focus(vm, WIN_ROLE_VIEWER);
+            *winptr = vm->windows[vm->focused];
+            break;
+        }
         case ENTER:
             switch((*winptr)->highlight){
-                case 0: {
+                case 0:
                     // add transaction
-                    Win* wViewer = vm->windows[WIN_ROLE_VIEWER];
-                    werase(wViewer->windowptr);
-                    mvwprintw(wViewer->windowptr, 2, 2, "Add transaction");
-                    wViewer->draw(wViewer);
-                    break;
-                }
-                case 1: {
+                case 1:
                     // search transaction
-                    Win* wViewer = vm->windows[WIN_ROLE_VIEWER];
-                    werase(wViewer->windowptr);
-                    mvwprintw(wViewer->windowptr, 2, 2, "Search transaction");
-                    wViewer->draw(wViewer);
-                    break;
-                }
                 case 2: {
                     // back
                     Win* wPrevMenu = ViewManager_pop_menu(vm);
@@ -277,35 +304,32 @@ void Handle_input_menu_transactions(struct ViewManager* vm, struct Win** winptr,
     }
 }
 
-void Handle_input_menu_currencies(struct ViewManager* vm, struct Win** winptr, int* loop){
+void Handle_input_menu_currencies(struct ViewManager* vm, struct Win** winptr, void* context){
+    (void)context;
     MenuData* data = (MenuData*)(*winptr)->userdata;
     if(!data) return;
 
     switch((*winptr)->keypress){
         case KEY_UP:
             if((*winptr)->highlight > 0) --((*winptr)->highlight);
+            (*winptr)->dirty = TRUE;
             break;
         case KEY_DOWN:
             if((*winptr)->highlight < data->option_count - 1) ++((*winptr)->highlight);
+            (*winptr)->dirty = TRUE;
             break;
+        case KEY_RIGHT: {
+            // shift focus to viewer window
+            ViewManager_focus(vm, WIN_ROLE_VIEWER);
+            *winptr = vm->windows[vm->focused];
+            break;
+        }
         case ENTER:
             switch((*winptr)->highlight){
-                case 0: {
+                case 0:
                     // add currency
-                    Win* wViewer = vm->windows[WIN_ROLE_VIEWER];
-                    werase(wViewer->windowptr);
-                    mvwprintw(wViewer->windowptr, 2, 2, "Add currency");
-                    wViewer->draw(wViewer);
-                    break;
-                }
-                case 1: {
+                case 1:
                     // remove currency
-                    Win* wViewer = vm->windows[WIN_ROLE_VIEWER];
-                    werase(wViewer->windowptr);
-                    mvwprintw(wViewer->windowptr, 2, 2, "Remove currency");
-                    wViewer->draw(wViewer);
-                    break;
-                }
                 case 2: {
                     // back
                     Win* wPrevMenu = ViewManager_pop_menu(vm);
@@ -321,35 +345,32 @@ void Handle_input_menu_currencies(struct ViewManager* vm, struct Win** winptr, i
     }
 }
 
-void Handle_input_menu_transaction_categories(struct ViewManager* vm, struct Win** winptr, int* loop){
+void Handle_input_menu_transaction_categories(struct ViewManager* vm, struct Win** winptr, void* context){
+    (void)context;
     MenuData* data = (MenuData*)(*winptr)->userdata;
     if(!data) return;
 
     switch((*winptr)->keypress){
         case KEY_UP:
             if((*winptr)->highlight > 0) --((*winptr)->highlight);
+            (*winptr)->dirty = TRUE;
             break;
         case KEY_DOWN:
             if((*winptr)->highlight < data->option_count - 1) ++((*winptr)->highlight);
+            (*winptr)->dirty = TRUE;
             break;
+        case KEY_RIGHT: {
+            // shift focus to viewer window
+            ViewManager_focus(vm, WIN_ROLE_VIEWER);
+            *winptr = vm->windows[vm->focused];
+            break;
+        }
         case ENTER:
             switch((*winptr)->highlight){
-                case 0: {
+                case 0:
                     // add transaction category
-                    Win* wViewer = vm->windows[WIN_ROLE_VIEWER];
-                    werase(wViewer->windowptr);
-                    mvwprintw(wViewer->windowptr, 2, 2, "Add transaction category");
-                    wViewer->draw(wViewer);
-                    break;
-                }
-                case 1: {
+                case 1:
                     // remove transaction category
-                    Win* wViewer = vm->windows[WIN_ROLE_VIEWER];
-                    werase(wViewer->windowptr);
-                    mvwprintw(wViewer->windowptr, 2, 2, "Remove transaction category");
-                    wViewer->draw(wViewer);
-                    break;
-                }
                 case 2: {
                     // back
                     Win* wPrevMenu = ViewManager_pop_menu(vm);
@@ -362,6 +383,26 @@ void Handle_input_menu_transaction_categories(struct ViewManager* vm, struct Win
                     break;
             }
             break;
+    }
+}
+
+void Handle_input_viewer(struct ViewManager* vm, struct Win** winptr, void* context){
+    (void)context;
+    switch((*winptr)->keypress){
+        case KEY_LEFT:
+            // shift focus to last menu
+            ViewManager_focus(vm, WIN_ROLE_MENU);
+            *winptr = vm->windows[vm->focused];
+            (*winptr)->dirty = TRUE;
+            break;
+        default:{
+            // temporary: show keypress
+            char buf[33];
+            snprintf(buf, 32, "Pressed key: %lu", (*winptr)->keypress);
+            ((ViewerData*)((*winptr)->userdata))->text = strdup(buf);
+            (*winptr)->dirty = TRUE;
+            break;
+        }
     }
 }
 
@@ -374,6 +415,7 @@ Win* Win_banner(size_t begin_y, size_t begin_x){
     Win* wBanner = Win_init(NULL, APP_BANNER_LINES+3, APP_SIDE_WIDTH, begin_y, begin_x, WIN_ROLE_BANNER);
     wBanner->draw = Win_draw;
     wBanner->handle_input = NULL;
+    wBanner->dirty = TRUE;
     for(size_t i = 0; i < APP_BANNER_LINES; ++i){
         mvwprintw(wBanner->windowptr, i+1, 3, "%s", __APP_BANNER__[i]);
     }
@@ -385,13 +427,16 @@ Win* Win_banner(size_t begin_y, size_t begin_x){
 Win* Win_viewer(size_t begin_y, size_t begin_x){
     log_message("Win_viewer: creating viewer window.");
     Win* wViewer = Win_init(NULL, __yMax, __xMax-APP_SIDE_WIDTH, begin_y, begin_x, WIN_ROLE_VIEWER);
-    wViewer->draw = Win_draw;
-    
-    // WIP
-    wViewer->handle_input = NULL;
+    wViewer->draw = Win_viewer_draw;
+    wViewer->handle_input = Handle_input_viewer;
+    wViewer->dirty = TRUE;
     
     keypad(wViewer->windowptr, TRUE);
-    mvwprintw(wViewer->windowptr, 2, 2, "%s", "Window for data viewing");
+
+    ViewerData* wd = (ViewerData*)malloc(sizeof(ViewerData));
+    wd->text = strdup("Window for data viewing");
+    wd->text_len = 24;
+    wViewer->userdata = (void*)wd;
 
     log_message("Win_viewer: OK.");
     return wViewer;
@@ -402,6 +447,7 @@ Win* Win_popup(const char* msg, const char* label, size_t begin_y, size_t begin_
     Win* wPopup = Win_init(label, 5, strlen(msg)+4, begin_y, begin_x, WIN_ROLE_POPUP);
     wPopup->draw = Win_draw;
     wPopup->handle_input = NULL;
+    wPopup->dirty = TRUE;
     
     mvwprintw(wPopup->windowptr, 2, 2, msg);
 
@@ -413,6 +459,7 @@ Win* Win_menu_main(size_t begin_y, size_t begin_x){
     log_message("Win_main_menu: creating main menu.");
     Win* wMainMenu = Win_init(" [+] MAIN MENU ", __yMax-APP_BANNER_LINES-3, APP_SIDE_WIDTH, begin_y, begin_x, WIN_ROLE_MENU);
     wMainMenu->draw = Win_menu_draw;
+    wMainMenu->dirty = TRUE;
     wMainMenu->handle_input = Handle_input_menu_main;
     
     keypad(wMainMenu->windowptr, TRUE);
@@ -429,6 +476,7 @@ Win* Win_menu_main(size_t begin_y, size_t begin_x){
 Win* Win_menu_accounts(size_t begin_y, size_t begin_x){
     Win* wAccountsMenu = Win_init(" [+] ACCOUNTS ", __yMax-APP_BANNER_LINES-3, APP_SIDE_WIDTH, begin_y, begin_x, WIN_ROLE_MENU);
     wAccountsMenu->draw = Win_menu_draw;
+    wAccountsMenu->dirty = TRUE;
     wAccountsMenu->handle_input = Handle_input_menu_accounts;
 
     keypad(wAccountsMenu->windowptr, TRUE);
@@ -444,6 +492,7 @@ Win* Win_menu_accounts(size_t begin_y, size_t begin_x){
 Win* Win_menu_transactions(size_t begin_y, size_t begin_x){
     Win* wTransactionsMenu = Win_init(" [+] TRANSACTIONS ", __yMax-APP_BANNER_LINES-3, APP_SIDE_WIDTH, begin_y, begin_x, WIN_ROLE_MENU);
     wTransactionsMenu->draw = Win_menu_draw;
+    wTransactionsMenu->dirty = TRUE;
     wTransactionsMenu->handle_input = Handle_input_menu_transactions;
 
     keypad(wTransactionsMenu->windowptr, TRUE);
@@ -459,6 +508,7 @@ Win* Win_menu_transactions(size_t begin_y, size_t begin_x){
 Win* Win_menu_currencies(size_t begin_y, size_t begin_x){
     Win* wCurrenciesMenu = Win_init(" [+] CURRENCIES ", __yMax-APP_BANNER_LINES-3, APP_SIDE_WIDTH, begin_y, begin_x, WIN_ROLE_MENU);
     wCurrenciesMenu->draw = Win_menu_draw;
+    wCurrenciesMenu->dirty = TRUE;
     wCurrenciesMenu->handle_input = Handle_input_menu_currencies;
 
     keypad(wCurrenciesMenu->windowptr, TRUE);
@@ -474,6 +524,7 @@ Win* Win_menu_currencies(size_t begin_y, size_t begin_x){
 Win* Win_menu_transaction_categories(size_t begin_y, size_t begin_x){
     Win* wTransactionCategoriesMenu = Win_init(" [+] TRANSACTION CATEGORIES ", __yMax-APP_BANNER_LINES-3, APP_SIDE_WIDTH, begin_y, begin_x, WIN_ROLE_MENU);
     wTransactionCategoriesMenu->draw = Win_menu_draw;
+    wTransactionCategoriesMenu->dirty = TRUE;
     wTransactionCategoriesMenu->handle_input = Handle_input_menu_transaction_categories;
 
     keypad(wTransactionCategoriesMenu->windowptr, TRUE);
@@ -528,6 +579,10 @@ void ViewManager_set(ViewManager* vm, WinRole role, Win* winptr){
     }
 
     vm->windows[role] = winptr;
+    if(winptr->draw){
+        winptr->draw(winptr);
+        wrefresh(winptr->windowptr);
+    }
     log_message("ViewManager: set window with label '%s' in role '%s'.", winptr->label, r);
 }
 
@@ -560,7 +615,12 @@ void ViewManager_focus(ViewManager* vm, WinRole role){
 
 void ViewManager_redraw_all(ViewManager* vm){
     log_message("ViewManager: redrawing all windows.");
-    for(size_t i = 0; i < ROLE_COUNT; ++i) if(vm->windows[i] != NULL) vm->windows[i]->draw(vm->windows[i]);
+    for(size_t i = 0; i < ROLE_COUNT; ++i) {
+        if(vm->windows[i] != NULL) {
+            vm->windows[i]->draw(vm->windows[i]);
+            wrefresh(vm->windows[i]->windowptr);
+        }
+    }
     log_message("ViewManager: OK.");
 }
 
@@ -572,14 +632,22 @@ void ViewManager_destroy(ViewManager** vm){
     log_message("ViewManager: OK.");
 }
 
-void ViewManager_listen(ViewManager* vm){
-    int loop = 1;
-    while(loop){
-        Win* focused_window = vm->windows[vm->focused];
+void ViewManager_listen(ViewManager* vm, InputContext* ctx){
+    Win* focused_window = NULL;
+    while(*(ctx->loop)){
+        focused_window = vm->windows[vm->focused];
         focused_window->keypress = wgetch(focused_window->windowptr);
         if(focused_window && focused_window->handle_input){
-            focused_window->handle_input(vm, &focused_window, &loop);
-            if(focused_window->draw) focused_window->draw(focused_window);
+            focused_window->handle_input(vm, &focused_window, ctx);
+
+            if(focused_window->dirty){
+                if(focused_window->draw){
+                    werase(focused_window->windowptr);
+                    focused_window->draw(focused_window);
+                    wrefresh(focused_window->windowptr);
+                }
+                focused_window->dirty = FALSE;
+            }
         }
     }
 }

@@ -16,6 +16,11 @@ void runtime_interactive(){
     cbreak();
     noecho();
     curs_set(0);
+    start_color();
+
+    init_pair(1, COLOR_WHITE, COLOR_BLACK);
+    init_pair(2, COLOR_WHITE, 236);
+
     refresh();
 
     getmaxyx(stdscr, __yMax, __xMax);
@@ -31,10 +36,11 @@ void runtime_interactive(){
     ViewManager_set(vm, WIN_ROLE_VIEWER, wViewer);
     ViewManager_set(vm, WIN_ROLE_MENU, wMainMenu);
     ViewManager_focus(vm, WIN_ROLE_MENU);
-    ViewManager_redraw_all(vm);
 
     // begin listening for user input
-    ViewManager_listen(vm);
+    int loop = 1;
+    InputContext ctx = {.loop = &loop};
+    ViewManager_listen(vm, &ctx);
 
     // destroy all windows in the manager and the manager itself
     ViewManager_destroy(&vm);
