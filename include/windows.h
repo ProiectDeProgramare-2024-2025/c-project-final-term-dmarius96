@@ -3,6 +3,11 @@
 
 #include <ncurses.h>
 #include "constants.h"
+#include "table_struct.h"
+
+typedef struct {
+    int* loop;
+} InputContext;
 
 typedef enum {
     WIN_ROLE_BANNER,
@@ -17,13 +22,12 @@ typedef struct {
 } MenuData;
 
 typedef struct {
-    char* text;
-    size_t text_len;
+    char* header;
+    size_t header_len;
+    TableData* table_chunk_prev;
+    TableData* table_chunk_current;
+    TableData* table_chunk_next;
 } ViewerData;
-
-typedef struct {
-    int* loop;
-} InputContext;
 
 struct ViewManager;
 

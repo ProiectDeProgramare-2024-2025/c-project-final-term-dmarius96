@@ -4,6 +4,8 @@
 #include "windows.h"
 #include "constants.h"
 #include "log_utils.h"
+#include "database.h"
+#include "queries.h"
 
 /***********************************/
 /*******GENERIC Win FUNCTIONS*******/
@@ -62,7 +64,10 @@ void Win_delete(Win** winptr){
             (*winptr)->userdata = NULL;
         }else if((*winptr)->role == WIN_ROLE_VIEWER){
             ViewerData* wd = (ViewerData*)(*winptr)->userdata;
-            if(wd->text) free(wd->text);
+            if(wd->header) free(wd->header);
+            if(wd->table_chunk_prev) free_table(wd->table_chunk_prev);
+            if(wd->table_chunk_current) free_table(wd->table_chunk_current);
+            if(wd->table_chunk_next) free_table(wd->table_chunk_next);
             free((*winptr)->userdata);
             (*winptr)->userdata = NULL;
         }
@@ -121,8 +126,6 @@ void Win_viewer_draw(Win* winptr){
     draw_viewer_background(winptr->windowptr, winptr->height, winptr->width);
     box(winptr->windowptr, 0, 0);
     if(winptr->label != NULL) mvwprintw(winptr->windowptr, 0, 2, winptr->label);
-    ViewerData* wd = (ViewerData*)(winptr->userdata);
-    mvwprintw(winptr->windowptr, 2, 2, wd->text);
 }
 
 /***********************************/
@@ -146,8 +149,8 @@ void Handle_input_menu_main(struct ViewManager* vm, struct Win** winptr, void* c
         case KEY_RIGHT: {
             // shift focus to viewer window
             ViewManager_focus(vm, WIN_ROLE_VIEWER);
-            // (*winptr)->dirty = TRUE;
             *winptr = vm->windows[vm->focused];
+            (*winptr)->dirty = TRUE;
             break;
         }
         case ENTER:
@@ -155,10 +158,11 @@ void Handle_input_menu_main(struct ViewManager* vm, struct Win** winptr, void* c
                 // each of these cases should shift the focus in ViewManager* vm
                 case 0: {
                     // accounts
-                    Win* wViewer = vm->windows[WIN_ROLE_VIEWER];
-                    werase(wViewer->windowptr);
-                    mvwprintw(wViewer->windowptr, 2, 2, "Now in menu: accounts");
-                    wViewer->draw(wViewer);
+                    
+                    // populate viewer with data from Accounts table
+                    // Win* wViewer = vm->windows[WIN_ROLE_VIEWER];
+
+                    // set new menu
                     ViewManager_push_menu(vm, (*winptr));
                     ViewManager_set(vm, WIN_ROLE_MENU, Win_menu_accounts((*winptr)->begin_y, (*winptr)->begin_x));
                     *winptr = vm->windows[vm->focused];
@@ -395,14 +399,14 @@ void Handle_input_viewer(struct ViewManager* vm, struct Win** winptr, void* cont
             *winptr = vm->windows[vm->focused];
             (*winptr)->dirty = TRUE;
             break;
-        default:{
-            // temporary: show keypress
-            char buf[33];
-            snprintf(buf, 32, "Pressed key: %lu", (*winptr)->keypress);
-            ((ViewerData*)((*winptr)->userdata))->text = strdup(buf);
+        case KEY_DOWN:
             (*winptr)->dirty = TRUE;
             break;
-        }
+        case KEY_UP:
+            (*winptr)->dirty = TRUE;
+            break;
+        default:
+            break;
     }
 }
 
@@ -434,8 +438,11 @@ Win* Win_viewer(size_t begin_y, size_t begin_x){
     keypad(wViewer->windowptr, TRUE);
 
     ViewerData* wd = (ViewerData*)malloc(sizeof(ViewerData));
-    wd->text = strdup("Window for data viewing");
-    wd->text_len = 24;
+    wd->header = NULL;
+    wd->header_len = 0;
+    wd->table_chunk_prev = NULL;
+    wd->table_chunk_current = NULL;
+    wd->table_chunk_next = NULL;
     wViewer->userdata = (void*)wd;
 
     log_message("Win_viewer: OK.");
@@ -609,6 +616,7 @@ void ViewManager_focus(ViewManager* vm, WinRole role){
     vm->focused = role;
     // logic here
     Win_draw(vm->windows[role]);
+    wrefresh(vm->windows[vm->focused]->windowptr);
 
     log_message("ViewManager: set focus on window with role '%s'.", r);
 }

@@ -1,5 +1,7 @@
 #include "constants.h"
 
+sqlite3* __db = NULL;
+
 size_t __xMax = 0;
 size_t __yMax = 0;
 

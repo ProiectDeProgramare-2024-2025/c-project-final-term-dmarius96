@@ -2,6 +2,9 @@
 #define APP_CONSTANTS_H
 
 #include <string.h>
+#include <sqlite3.h>
+
+extern sqlite3* __db;
 
 extern size_t __xMax;
 extern size_t __yMax;

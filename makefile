@@ -2,7 +2,7 @@ CC = gcc
 CFLAGS = -Wall -Wextra -pedantic -Iinclude
 CFLAGS_BUILD = -O3
 CFLAGS_DEBUG = -g -DDEBUG -O0
-LDFLAGS = -lncurses #-lsqlite3
+LDFLAGS = -lncurses -lsqlite3
 
 BUILD_DIR = build
 SRC_DIR = src
