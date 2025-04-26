@@ -8,43 +8,41 @@ BUILD_DIR = build
 SRC_DIR = src
 OBJ_DIR = obj
 
-SRCS := $(wildcard $(SRC_DIR)/*.c)
+TARGET = finance-cli
+
+SRCS := $(shell find $(SRC_DIR) -name '*.c')
 OBJS_RELEASE := $(patsubst $(SRC_DIR)/%.c, $(OBJ_DIR)/release/%.o, $(SRCS))
 OBJS_DEBUG := $(patsubst $(SRC_DIR)/%.c, $(OBJ_DIR)/debug/%.o, $(SRCS))
 
-TARGET_RELEASE = $(BUILD_DIR)/release/finance-cli
-TARGET_DEBUG = $(BUILD_DIR)/debug/finance-cli
+TARGET_RELEASE = $(BUILD_DIR)/release/$(TARGET)
+TARGET_DEBUG = $(BUILD_DIR)/debug/$(TARGET)
 
 all: release
 
 release: CFLAGS += $(CFLAGS_BUILD)
 release: $(TARGET_RELEASE)
 
-$(TARGET_RELEASE): $(OBJ_DIR)/release/finance-cli.o $(OBJS_RELEASE) | $(BUILD_DIR)/release
-	$(CC) $^ -o $@ $(LDFLAGS)
-
-$(OBJ_DIR)/release/%.o: $(SRC_DIR)/%.c | $(OBJ_DIR)/release
-	$(CC) $(CFLAGS) -c $< -o $@
-
 debug: CFLAGS += $(CFLAGS_DEBUG)
 debug: $(TARGET_DEBUG)
 
-$(TARGET_DEBUG): $(OBJ_DIR)/debug/finance-cli.o $(OBJS_DEBUG) | $(BUILD_DIR)/debug
+$(TARGET_RELEASE): $(OBJS_RELEASE) | $(BUILD_DIR)/release
 	$(CC) $^ -o $@ $(LDFLAGS)
 
-$(OBJ_DIR)/debug/%.o: $(SRC_DIR)/%.c | $(OBJ_DIR)/debug
+$(TARGET_DEBUG): $(OBJS_DEBUG) | $(BUILD_DIR)/debug
+	$(CC) $^ -o $@ $(LDFLAGS)
+
+$(OBJ_DIR)/release/%.o: $(SRC_DIR)/%.c
+	@mkdir -p $(dir $@)
 	$(CC) $(CFLAGS) -c $< -o $@
 
-$(OBJ_DIR)/release/finance-cli.o: main.c | $(OBJ_DIR)/release
-	$(CC) $(CFLAGS) -c main.c -o $@
+$(OBJ_DIR)/debug/%.o: $(SRC_DIR)/%.c
+	@mkdir -p $(dir $@)
+	$(CC) $(CFLAGS) -c $< -o $@
 
-$(OBJ_DIR)/debug/finance-cli.o: main.c | $(OBJ_DIR)/debug
-	$(CC) $(CFLAGS) -c main.c -o $@
-
-$(OBJ_DIR)/release $(OBJ_DIR)/debug $(BUILD_DIR)/release $(BUILD_DIR)/debug:
+$(BUILD_DIR)/release $(BUILD_DIR)/debug:
 	mkdir -p $@
 
 clean:
-	rm -rf obj build
+	rm -rf $(OBJ_DIR) $(BUILD_DIR)
 
 .PHONY: all release debug clean

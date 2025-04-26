@@ -1,11 +1,11 @@
 #include <string.h>
 #include <sqlite3.h>
 
-#include "include/interactive.h"
-#include "include/noninteractive.h"
-#include "include/log_utils.h"
-#include "include/database.h"
-#include "include/constants.h"
+#include "interactive.h"
+#include "noninteractive.h"
+#include "log_utils.h"
+#include "database.h"
+#include "constants.h"
 
 int main(int argv, char* argc[]){
 
