@@ -5,4 +5,6 @@
 
 Win* Win_popup(const char* msg, const char* label, size_t begin_y, size_t begin_x);
 
+void Win_popup_destructor(Win** winptr);
+
 #endif

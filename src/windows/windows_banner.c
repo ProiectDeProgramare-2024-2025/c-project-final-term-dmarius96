@@ -5,6 +5,7 @@ Win* Win_banner(size_t begin_y, size_t begin_x){
     Win* wBanner = Win_init(NULL, APP_BANNER_LINES+3, APP_SIDE_WIDTH, begin_y, begin_x, WIN_ROLE_BANNER);
     wBanner->draw = Win_draw;
     wBanner->handle_input = NULL;
+    wBanner->destructor = Win_banner_destructor;
     wBanner->dirty = TRUE;
     for(size_t i = 0; i < APP_BANNER_LINES; ++i){
         mvwprintw(wBanner->windowptr, i+1, 3, "%s", __APP_BANNER__[i]);
@@ -12,4 +13,11 @@ Win* Win_banner(size_t begin_y, size_t begin_x){
 
     log_message("Win_banner: OK.");
     return wBanner;
+}
+
+void Win_banner_destructor(Win** winptr){
+    delwin((*winptr)->windowptr);
+    if((*winptr)->label) free((*winptr)->label);
+    free(*winptr);
+    *winptr = NULL;
 }

@@ -117,12 +117,4 @@ int insert_transaction(
 // Prints table Transactions to stdout.
 void fetch_transactions(sqlite3* db);
 
-/********************************************************/
-
-void free_table(TableData* table);
-
-TableData* fetch_table_chunk(sqlite3* db, const char* name, const char* query, size_t offset, size_t limit);
-
-TableData* fetch_chunk(sqlite3* db, const char* query);
-
 #endif

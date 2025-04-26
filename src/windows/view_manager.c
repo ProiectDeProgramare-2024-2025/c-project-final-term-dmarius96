@@ -86,7 +86,7 @@ void ViewManager_redraw_all(ViewManager* vm){
 
 void ViewManager_destroy(ViewManager** vm){
     log_message("ViewManager: destroying view manager.");
-    for(size_t i = 0; i < ROLE_COUNT; ++i) Win_delete(&(*vm)->windows[i]);
+    for(size_t i = 0; i < ROLE_COUNT; ++i) if((*vm)->windows[i]) (*vm)->windows[i]->destructor(&(*vm)->windows[i]);
     free(*vm);
     *vm = NULL;
     log_message("ViewManager: OK.");

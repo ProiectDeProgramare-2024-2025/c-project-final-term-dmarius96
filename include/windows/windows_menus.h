@@ -3,11 +3,18 @@
 
 #include "windows.h"
 
+typedef struct {
+    const char** options;
+    size_t option_count;
+} MenuData;
+
 /***********************************/
 /********DRAWING FUNCTIONS**********/
 /***********************************/
 
 void Win_menu_draw(Win* winptr);
+
+void Win_menu_destructor(Win** winptr);
 
 /***********************************/
 /*****INPUT HANDLING FUNCTIONS******/

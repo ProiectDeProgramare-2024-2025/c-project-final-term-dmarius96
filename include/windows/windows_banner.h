@@ -5,4 +5,6 @@
 
 Win* Win_banner(size_t begin_y, size_t begin_x);
 
+void Win_banner_destructor(Win** winptr);
+
 #endif

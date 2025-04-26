@@ -15,19 +15,6 @@ typedef enum {
     WIN_ROLE_POPUP
 } WinRole;
 
-typedef struct {
-    const char** options;
-    size_t option_count;
-} MenuData;
-
-typedef struct {
-    char* header;
-    size_t header_len;
-    TableData* table_chunk_prev;
-    TableData* table_chunk_current;
-    TableData* table_chunk_next;
-} ViewerData;
-
 struct ViewManager;
 
 typedef struct Win{
@@ -42,9 +29,21 @@ typedef struct Win{
     size_t highlight;
     void (*draw)(struct Win*);
     void (*handle_input)(struct ViewManager*, struct Win**, void* context);
+    void (*destructor)(struct Win**);
     void* userdata;
     bool dirty;
 } Win;
+
+typedef struct {
+    int* loop;
+} InputContext;
+
+typedef struct ViewManager{
+    Win* windows[ROLE_COUNT];
+    WinRole focused;
+    Win* menu_stack[MENU_STACK_MAX];
+    size_t menu_stack_top;
+} ViewManager;
 
 /*******************************************************/
 
@@ -54,8 +53,6 @@ Win* Win_init(
     size_t begin_y, size_t begin_x,
     WinRole role
 );
-
-void Win_delete(Win** winptr);
 
 void Win_draw(Win* winptr);
 

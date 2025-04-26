@@ -23,6 +23,14 @@ void Win_menu_draw(Win* winptr){
     wattroff(winptr->windowptr, A_REVERSE);
 }
 
+void Win_menu_destructor(Win** winptr){
+    delwin((*winptr)->windowptr);
+    if((*winptr)->label) free((*winptr)->label);
+    if((*winptr)->userdata) free((*winptr)->userdata);
+    free(*winptr);
+    *winptr = NULL;
+}
+
 /***********************************/
 /*****INPUT HANDLING FUNCTIONS******/
 /***********************************/
@@ -102,7 +110,7 @@ void Handle_input_menu_main(struct ViewManager* vm, struct Win** winptr, void* c
                     Win_draw(wPopup);
                     wrefresh(wPopup->windowptr);
                     getch();
-                    Win_delete(&wPopup);
+                    wPopup->destructor(&wPopup);
                     ViewManager_redraw_all(vm);
                     break;
                 }
@@ -151,7 +159,7 @@ void Handle_input_menu_accounts(struct ViewManager* vm, struct Win** winptr, voi
                 case 3: {
                     Win* wPrevMenu = ViewManager_pop_menu(vm);
                     ViewManager_set(vm, WIN_ROLE_MENU, wPrevMenu);
-                    Win_delete(winptr);
+                    (*winptr)->destructor(winptr);
                     *winptr = vm->windows[vm->focused];
                     break;
                 }
@@ -192,7 +200,7 @@ void Handle_input_menu_transactions(struct ViewManager* vm, struct Win** winptr,
                     // back
                     Win* wPrevMenu = ViewManager_pop_menu(vm);
                     ViewManager_set(vm, WIN_ROLE_MENU, wPrevMenu);
-                    Win_delete(winptr);
+                    (*winptr)->destructor(winptr);
                     *winptr = vm->windows[vm->focused];
                     break;
                 }
@@ -233,7 +241,7 @@ void Handle_input_menu_currencies(struct ViewManager* vm, struct Win** winptr, v
                     // back
                     Win* wPrevMenu = ViewManager_pop_menu(vm);
                     ViewManager_set(vm, WIN_ROLE_MENU, wPrevMenu);
-                    Win_delete(winptr);
+                    (*winptr)->destructor(winptr);
                     *winptr = vm->windows[vm->focused];
                     break;
                 }
@@ -274,7 +282,7 @@ void Handle_input_menu_transaction_categories(struct ViewManager* vm, struct Win
                     // back
                     Win* wPrevMenu = ViewManager_pop_menu(vm);
                     ViewManager_set(vm, WIN_ROLE_MENU, wPrevMenu);
-                    Win_delete(winptr);
+                    (*winptr)->destructor(winptr);
                     *winptr = vm->windows[vm->focused];
                     break;
                 }
@@ -293,8 +301,9 @@ Win* Win_menu_main(size_t begin_y, size_t begin_x){
     log_message("Win_main_menu: creating main menu.");
     Win* wMainMenu = Win_init(" [+] MAIN MENU ", __yMax-APP_BANNER_LINES-3, APP_SIDE_WIDTH, begin_y, begin_x, WIN_ROLE_MENU);
     wMainMenu->draw = Win_menu_draw;
-    wMainMenu->dirty = TRUE;
     wMainMenu->handle_input = Handle_input_menu_main;
+    wMainMenu->destructor = Win_menu_destructor;
+    wMainMenu->dirty = TRUE;
     
     keypad(wMainMenu->windowptr, TRUE);
 
@@ -310,8 +319,9 @@ Win* Win_menu_main(size_t begin_y, size_t begin_x){
 Win* Win_menu_accounts(size_t begin_y, size_t begin_x){
     Win* wAccountsMenu = Win_init(" [+] ACCOUNTS ", __yMax-APP_BANNER_LINES-3, APP_SIDE_WIDTH, begin_y, begin_x, WIN_ROLE_MENU);
     wAccountsMenu->draw = Win_menu_draw;
-    wAccountsMenu->dirty = TRUE;
     wAccountsMenu->handle_input = Handle_input_menu_accounts;
+    wAccountsMenu->destructor = Win_menu_destructor;
+    wAccountsMenu->dirty = TRUE;
 
     keypad(wAccountsMenu->windowptr, TRUE);
 
@@ -326,8 +336,9 @@ Win* Win_menu_accounts(size_t begin_y, size_t begin_x){
 Win* Win_menu_transactions(size_t begin_y, size_t begin_x){
     Win* wTransactionsMenu = Win_init(" [+] TRANSACTIONS ", __yMax-APP_BANNER_LINES-3, APP_SIDE_WIDTH, begin_y, begin_x, WIN_ROLE_MENU);
     wTransactionsMenu->draw = Win_menu_draw;
-    wTransactionsMenu->dirty = TRUE;
     wTransactionsMenu->handle_input = Handle_input_menu_transactions;
+    wTransactionsMenu->destructor = Win_menu_destructor;
+    wTransactionsMenu->dirty = TRUE;
 
     keypad(wTransactionsMenu->windowptr, TRUE);
 
@@ -342,8 +353,9 @@ Win* Win_menu_transactions(size_t begin_y, size_t begin_x){
 Win* Win_menu_currencies(size_t begin_y, size_t begin_x){
     Win* wCurrenciesMenu = Win_init(" [+] CURRENCIES ", __yMax-APP_BANNER_LINES-3, APP_SIDE_WIDTH, begin_y, begin_x, WIN_ROLE_MENU);
     wCurrenciesMenu->draw = Win_menu_draw;
-    wCurrenciesMenu->dirty = TRUE;
     wCurrenciesMenu->handle_input = Handle_input_menu_currencies;
+    wCurrenciesMenu->destructor = Win_menu_destructor;
+    wCurrenciesMenu->dirty = TRUE;
 
     keypad(wCurrenciesMenu->windowptr, TRUE);
 
@@ -358,8 +370,9 @@ Win* Win_menu_currencies(size_t begin_y, size_t begin_x){
 Win* Win_menu_transaction_categories(size_t begin_y, size_t begin_x){
     Win* wTransactionCategoriesMenu = Win_init(" [+] TRANSACTION CATEGORIES ", __yMax-APP_BANNER_LINES-3, APP_SIDE_WIDTH, begin_y, begin_x, WIN_ROLE_MENU);
     wTransactionCategoriesMenu->draw = Win_menu_draw;
-    wTransactionCategoriesMenu->dirty = TRUE;
     wTransactionCategoriesMenu->handle_input = Handle_input_menu_transaction_categories;
+    wTransactionCategoriesMenu->destructor = Win_menu_destructor;
+    wTransactionCategoriesMenu->dirty = TRUE;
 
     keypad(wTransactionCategoriesMenu->windowptr, TRUE);
 

@@ -3,17 +3,6 @@
 
 #include "windows.h"
 
-typedef struct {
-    int* loop;
-} InputContext;
-
-typedef struct ViewManager{
-    Win* windows[ROLE_COUNT];
-    WinRole focused;
-    Win* menu_stack[MENU_STACK_MAX];
-    size_t menu_stack_top;
-} ViewManager;
-
 /*******************************************************/
 
 ViewManager* ViewManager_init();
