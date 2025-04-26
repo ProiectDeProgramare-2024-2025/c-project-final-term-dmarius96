@@ -8,17 +8,20 @@
 
 Win* Win_init(
     const char* label,
-    size_t nlines, size_t ncols,
-    size_t begin_y, size_t begin_x,
-    WinRole role
+    const size_t nlines, const size_t ncols,
+    const size_t begin_y, const size_t begin_x,
+    const WinRole role
 ){
     if(label != NULL) log_message("Win_init: initializing window with label '%s'.", label);
     else log_message("Win_init: initializing window with anonymous label.");
 
-    Win* winptr = (Win*)malloc(sizeof(Win));
-    if(winptr == NULL) log_error("Win_init: failed to allocate memory for window.");
+    Win* winptr = malloc(sizeof(Win));
+    if(winptr == NULL) {
+        log_error("Win_init: failed to allocate memory for window.");
+        return NULL;
+    }
 
-    winptr->windowptr = newwin(nlines, ncols, begin_y, begin_x);
+    winptr->windowptr = newwin((int)nlines, (int)ncols, (int)begin_y, (int)begin_x);
     if(label != NULL) winptr->label = strdup(label);
     else winptr->label = NULL;
     winptr->begin_y = begin_y;
@@ -35,46 +38,7 @@ Win* Win_init(
     return winptr;
 }
 
-void Win_delete(Win** winptr){
-    if(*winptr == NULL) {
-        log_message("Win_delete: no window to delete.");
-        return;
-    }
-
-    if((*winptr)->label == NULL) {
-        log_message("Win_delete: deleting window with anonymous label.");
-    }else{
-        log_message("Win_delete: deleting window with label '%s'.", (*winptr)->label);
-        free((*winptr)->label);
-    }
-
-    if(delwin((*winptr)->windowptr)) {
-        log_error("Win_delete: failed to deallocate window.");
-        return;
-    }
-
-    if((*winptr)->userdata) {
-        if((*winptr)->role == WIN_ROLE_MENU){
-            free((*winptr)->userdata);
-            (*winptr)->userdata = NULL;
-        }else if((*winptr)->role == WIN_ROLE_VIEWER){
-            ViewerData* wd = (ViewerData*)(*winptr)->userdata;
-            if(wd->header) free(wd->header);
-            if(wd->table_chunk_prev) free_table(wd->table_chunk_prev);
-            if(wd->table_chunk_current) free_table(wd->table_chunk_current);
-            if(wd->table_chunk_next) free_table(wd->table_chunk_next);
-            free((*winptr)->userdata);
-            (*winptr)->userdata = NULL;
-        }
-    }
-
-    free(*winptr);
-    *winptr = NULL;
-
-    log_message("Win_delete: OK.");
-}
-
-void Win_draw(Win* winptr){
+void Win_draw(const Win* winptr){
     if(winptr->label) log_message("Win_draw: drawing window with label '%s'.", winptr->label);
     else              log_message("Win_draw: drawing window with anonymous label.");
 

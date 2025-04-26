@@ -1,25 +1,26 @@
 #include "windows/windows_menus.h"
+#include "queries.h"
 
 /***********************************/
 /********DRAWING FUNCTIONS**********/
 /***********************************/
 
-void Win_menu_draw(Win* winptr){
-    MenuData* m = (MenuData*)winptr->userdata;
+void Win_menu_draw(const Win* winptr){
+    const MenuData* m = winptr->userdata;
 
     box(winptr->windowptr, 0, 0);
     if (winptr->label != NULL) mvwprintw(winptr->windowptr, 0, 2, winptr->label);
 
-    size_t n = m->option_count;
+    const size_t n = m->option_count;
 
     for (size_t i = 0; i < n-1; ++i) {
         if (i == winptr->highlight) wattron(winptr->windowptr, A_REVERSE);
-        mvwprintw(winptr->windowptr, (i + 1) * 2, (winptr->width - strlen(m->options[i])) / 2, m->options[i]);
+        mvwprintw(winptr->windowptr, ((int)i + 1) * 2, (int)(winptr->width - strlen(m->options[i])) / 2, m->options[i]);
         wattroff(winptr->windowptr, A_REVERSE);
     }
 
     if(n-1 == winptr->highlight) wattron(winptr->windowptr, A_REVERSE);
-    mvwprintw(winptr->windowptr, winptr->height-3, (APP_SIDE_WIDTH - strlen(m->options[n-1])) / 2, m->options[n-1]);
+    mvwprintw(winptr->windowptr, (int)winptr->height-3, (int)(APP_SIDE_WIDTH - strlen(m->options[n-1])) / 2, m->options[n-1]);
     wattroff(winptr->windowptr, A_REVERSE);
 }
 
@@ -35,18 +36,18 @@ void Win_menu_destructor(Win** winptr){
 /*****INPUT HANDLING FUNCTIONS******/
 /***********************************/
 
-void Handle_input_menu_main(struct ViewManager* vm, struct Win** winptr, void* context){
-    MenuData* data = (MenuData*)(*winptr)->userdata;
+void Handle_input_menu_main(ViewManager* vm, Win** winptr, const void* context){
+    MenuData* data = (*winptr)->userdata;
     if(!data) return;
-    InputContext* ctx = (InputContext*)context;
+    const InputContext* ctx = context;
 
     switch((*winptr)->keypress){
         case KEY_UP:
-            if((*winptr)->highlight > 0) --((*winptr)->highlight);
+            if((*winptr)->highlight > 0) --(*winptr)->highlight;
             (*winptr)->dirty = TRUE;
             break;
         case KEY_DOWN:
-            if((*winptr)->highlight < data->option_count - 1) ++((*winptr)->highlight);
+            if((*winptr)->highlight < data->option_count - 1) ++(*winptr)->highlight;
             (*winptr)->dirty = TRUE;
             break;
         case KEY_RIGHT: {
@@ -63,12 +64,16 @@ void Handle_input_menu_main(struct ViewManager* vm, struct Win** winptr, void* c
                     // accounts
                     
                     // populate viewer with data from Accounts table
-                    // Win* wViewer = vm->windows[WIN_ROLE_VIEWER];
+                    Win* wViewer = vm->windows[WIN_ROLE_VIEWER];
+                    ViewerData* vd = wViewer->userdata;
+                    vd->on_focus = MENU_ACCOUNTS;
+                    ViewerTab_populate_tab(&vd->tabs[vd->on_focus], 0, wViewer->height, table_names[2], queries_fetch_tables[2]);
+                    wViewer->dirty = TRUE;
 
                     // set new menu
-                    ViewManager_push_menu(vm, (*winptr));
+                    ViewManager_push_menu(vm, *winptr);
                     ViewManager_set(vm, WIN_ROLE_MENU, Win_menu_accounts((*winptr)->begin_y, (*winptr)->begin_x));
-                    *winptr = vm->windows[vm->focused];
+                    *winptr = vm->windows[WIN_ROLE_VIEWER];
                     break;
                 }
                 case 1: {
@@ -77,7 +82,7 @@ void Handle_input_menu_main(struct ViewManager* vm, struct Win** winptr, void* c
                     werase(wViewer->windowptr);
                     mvwprintw(wViewer->windowptr, 2, 2, "Now in menu: transactions");
                     wViewer->draw(wViewer);
-                    ViewManager_push_menu(vm, (*winptr));
+                    ViewManager_push_menu(vm, *winptr);
                     ViewManager_set(vm, WIN_ROLE_MENU, Win_menu_transactions((*winptr)->begin_y, (*winptr)->begin_x));
                     *winptr = vm->windows[vm->focused];
                     break;
@@ -88,7 +93,7 @@ void Handle_input_menu_main(struct ViewManager* vm, struct Win** winptr, void* c
                     werase(wViewer->windowptr);
                     mvwprintw(wViewer->windowptr, 2, 2, "Now in menu: currencies");
                     wViewer->draw(wViewer);
-                    ViewManager_push_menu(vm, (*winptr));
+                    ViewManager_push_menu(vm, *winptr);
                     ViewManager_set(vm, WIN_ROLE_MENU, Win_menu_currencies((*winptr)->begin_y, (*winptr)->begin_x));
                     *winptr = vm->windows[vm->focused];
                     break;
@@ -99,7 +104,7 @@ void Handle_input_menu_main(struct ViewManager* vm, struct Win** winptr, void* c
                     werase(wViewer->windowptr);
                     mvwprintw(wViewer->windowptr, 2, 2, "Now in menu: transaction categories");
                     wViewer->draw(wViewer);
-                    ViewManager_push_menu(vm, (*winptr));
+                    ViewManager_push_menu(vm, *winptr);
                     ViewManager_set(vm, WIN_ROLE_MENU, Win_menu_transaction_categories((*winptr)->begin_y, (*winptr)->begin_x));
                     *winptr = vm->windows[vm->focused];
                     break;
@@ -115,27 +120,28 @@ void Handle_input_menu_main(struct ViewManager* vm, struct Win** winptr, void* c
                     break;
                 }
                 case 5:
-                    *(ctx->loop) = 0;
+                    *ctx->loop = 0;
                     break;
                 default:
                     break;
             }
             break;
+        default: ;
     }
 }
 
-void Handle_input_menu_accounts(struct ViewManager* vm, struct Win** winptr, void* context){
+void Handle_input_menu_accounts(ViewManager* vm, Win** winptr, const void* context){
     (void)context;
-    MenuData* data = (MenuData*)(*winptr)->userdata;
+    MenuData* data = (*winptr)->userdata;
     if(!data) return;
 
     switch((*winptr)->keypress){
         case KEY_UP:
-            if((*winptr)->highlight > 0) --((*winptr)->highlight);
+            if((*winptr)->highlight > 0) --(*winptr)->highlight;
             (*winptr)->dirty = TRUE;
             break;
         case KEY_DOWN:
-            if((*winptr)->highlight < data->option_count - 1) ++((*winptr)->highlight);
+            if((*winptr)->highlight < data->option_count - 1) ++(*winptr)->highlight;
             (*winptr)->dirty = TRUE;
             break;
         case KEY_RIGHT: {
@@ -167,21 +173,22 @@ void Handle_input_menu_accounts(struct ViewManager* vm, struct Win** winptr, voi
                     break;
             }
             break;
+        default: ;
     }
 }
 
-void Handle_input_menu_transactions(struct ViewManager* vm, struct Win** winptr, void* context){
+void Handle_input_menu_transactions(ViewManager* vm, Win** winptr, const void* context){
     (void)context;
-    MenuData* data = (MenuData*)(*winptr)->userdata;
+    MenuData* data = (*winptr)->userdata;
     if(!data) return;
 
     switch((*winptr)->keypress){
         case KEY_UP:
-            if((*winptr)->highlight > 0) --((*winptr)->highlight);
+            if((*winptr)->highlight > 0) --(*winptr)->highlight;
             (*winptr)->dirty = TRUE;
             break;
         case KEY_DOWN:
-            if((*winptr)->highlight < data->option_count - 1) ++((*winptr)->highlight);
+            if((*winptr)->highlight < data->option_count - 1) ++(*winptr)->highlight;
             (*winptr)->dirty = TRUE;
             break;
         case KEY_RIGHT: {
@@ -208,21 +215,22 @@ void Handle_input_menu_transactions(struct ViewManager* vm, struct Win** winptr,
                     break;
             }
             break;
+        default: ;
     }
 }
 
-void Handle_input_menu_currencies(struct ViewManager* vm, struct Win** winptr, void* context){
+void Handle_input_menu_currencies(ViewManager* vm, Win** winptr, const void* context){
     (void)context;
-    MenuData* data = (MenuData*)(*winptr)->userdata;
+    MenuData* data = (*winptr)->userdata;
     if(!data) return;
 
     switch((*winptr)->keypress){
         case KEY_UP:
-            if((*winptr)->highlight > 0) --((*winptr)->highlight);
+            if((*winptr)->highlight > 0) --(*winptr)->highlight;
             (*winptr)->dirty = TRUE;
             break;
         case KEY_DOWN:
-            if((*winptr)->highlight < data->option_count - 1) ++((*winptr)->highlight);
+            if((*winptr)->highlight < data->option_count - 1) ++(*winptr)->highlight;
             (*winptr)->dirty = TRUE;
             break;
         case KEY_RIGHT: {
@@ -249,21 +257,22 @@ void Handle_input_menu_currencies(struct ViewManager* vm, struct Win** winptr, v
                     break;
             }
             break;
+        default: ;
     }
 }
 
-void Handle_input_menu_transaction_categories(struct ViewManager* vm, struct Win** winptr, void* context){
+void Handle_input_menu_transaction_categories(ViewManager* vm, Win** winptr, const void* context){
     (void)context;
-    MenuData* data = (MenuData*)(*winptr)->userdata;
+    MenuData* data = (*winptr)->userdata;
     if(!data) return;
 
     switch((*winptr)->keypress){
         case KEY_UP:
-            if((*winptr)->highlight > 0) --((*winptr)->highlight);
+            if((*winptr)->highlight > 0) --(*winptr)->highlight;
             (*winptr)->dirty = TRUE;
             break;
         case KEY_DOWN:
-            if((*winptr)->highlight < data->option_count - 1) ++((*winptr)->highlight);
+            if((*winptr)->highlight < data->option_count - 1) ++(*winptr)->highlight;
             (*winptr)->dirty = TRUE;
             break;
         case KEY_RIGHT: {
@@ -290,6 +299,7 @@ void Handle_input_menu_transaction_categories(struct ViewManager* vm, struct Win
                     break;
             }
             break;
+        default: ;
     }
 }
 
@@ -297,7 +307,7 @@ void Handle_input_menu_transaction_categories(struct ViewManager* vm, struct Win
 /*******SPAWNING FUNCTIONS**********/
 /***********************************/
 
-Win* Win_menu_main(size_t begin_y, size_t begin_x){
+Win* Win_menu_main(const size_t begin_y, const size_t begin_x){
     log_message("Win_main_menu: creating main menu.");
     Win* wMainMenu = Win_init(" [+] MAIN MENU ", __yMax-APP_BANNER_LINES-3, APP_SIDE_WIDTH, begin_y, begin_x, WIN_ROLE_MENU);
     wMainMenu->draw = Win_menu_draw;
@@ -307,7 +317,7 @@ Win* Win_menu_main(size_t begin_y, size_t begin_x){
     
     keypad(wMainMenu->windowptr, TRUE);
 
-    MenuData* m = (MenuData*)malloc(sizeof(MenuData));
+    MenuData* m = malloc(sizeof(MenuData));
     m->options = __APP_MAIN_MENU_CHOICES;
     m->option_count = APP_MAIN_MENU_CHOICES_NO;
     wMainMenu->userdata = (void*)m;
@@ -316,7 +326,7 @@ Win* Win_menu_main(size_t begin_y, size_t begin_x){
     return wMainMenu;
 }
 
-Win* Win_menu_accounts(size_t begin_y, size_t begin_x){
+Win* Win_menu_accounts(const size_t begin_y, const size_t begin_x){
     Win* wAccountsMenu = Win_init(" [+] ACCOUNTS ", __yMax-APP_BANNER_LINES-3, APP_SIDE_WIDTH, begin_y, begin_x, WIN_ROLE_MENU);
     wAccountsMenu->draw = Win_menu_draw;
     wAccountsMenu->handle_input = Handle_input_menu_accounts;
@@ -325,7 +335,7 @@ Win* Win_menu_accounts(size_t begin_y, size_t begin_x){
 
     keypad(wAccountsMenu->windowptr, TRUE);
 
-    MenuData* m = (MenuData*)malloc(sizeof(MenuData));
+    MenuData* m = malloc(sizeof(MenuData));
     m->options = __APP_ACCOUNTS_MENU_CHOICES;
     m->option_count = APP_ACCOUNTS_MENU_CHOICES_NO;
     wAccountsMenu->userdata = (void*)m;
@@ -333,7 +343,7 @@ Win* Win_menu_accounts(size_t begin_y, size_t begin_x){
     return wAccountsMenu;
 }
 
-Win* Win_menu_transactions(size_t begin_y, size_t begin_x){
+Win* Win_menu_transactions(const size_t begin_y, const size_t begin_x){
     Win* wTransactionsMenu = Win_init(" [+] TRANSACTIONS ", __yMax-APP_BANNER_LINES-3, APP_SIDE_WIDTH, begin_y, begin_x, WIN_ROLE_MENU);
     wTransactionsMenu->draw = Win_menu_draw;
     wTransactionsMenu->handle_input = Handle_input_menu_transactions;
@@ -342,7 +352,7 @@ Win* Win_menu_transactions(size_t begin_y, size_t begin_x){
 
     keypad(wTransactionsMenu->windowptr, TRUE);
 
-    MenuData* m = (MenuData*)malloc(sizeof(MenuData));
+    MenuData* m = malloc(sizeof(MenuData));
     m->options = __APP_TRANSACTIONS_MENU_CHOICES;
     m->option_count = APP_TRANSACTIONS_MENU_CHOICES_NO;
     wTransactionsMenu->userdata = (void*)m;
@@ -350,7 +360,7 @@ Win* Win_menu_transactions(size_t begin_y, size_t begin_x){
     return wTransactionsMenu;
 }
 
-Win* Win_menu_currencies(size_t begin_y, size_t begin_x){
+Win* Win_menu_currencies(const size_t begin_y, const size_t begin_x){
     Win* wCurrenciesMenu = Win_init(" [+] CURRENCIES ", __yMax-APP_BANNER_LINES-3, APP_SIDE_WIDTH, begin_y, begin_x, WIN_ROLE_MENU);
     wCurrenciesMenu->draw = Win_menu_draw;
     wCurrenciesMenu->handle_input = Handle_input_menu_currencies;
@@ -359,7 +369,7 @@ Win* Win_menu_currencies(size_t begin_y, size_t begin_x){
 
     keypad(wCurrenciesMenu->windowptr, TRUE);
 
-    MenuData* m = (MenuData*)malloc(sizeof(MenuData));
+    MenuData* m = malloc(sizeof(MenuData));
     m->options = __APP_CURRENCIES_MENU_CHOICES;
     m->option_count = APP_CURRENCIES_MENU_CHOICES_NO;
     wCurrenciesMenu->userdata = (void*)m;
@@ -367,7 +377,7 @@ Win* Win_menu_currencies(size_t begin_y, size_t begin_x){
     return wCurrenciesMenu;
 }
 
-Win* Win_menu_transaction_categories(size_t begin_y, size_t begin_x){
+Win* Win_menu_transaction_categories(const size_t begin_y, const size_t begin_x){
     Win* wTransactionCategoriesMenu = Win_init(" [+] TRANSACTION CATEGORIES ", __yMax-APP_BANNER_LINES-3, APP_SIDE_WIDTH, begin_y, begin_x, WIN_ROLE_MENU);
     wTransactionCategoriesMenu->draw = Win_menu_draw;
     wTransactionCategoriesMenu->handle_input = Handle_input_menu_transaction_categories;
@@ -376,7 +386,7 @@ Win* Win_menu_transaction_categories(size_t begin_y, size_t begin_x){
 
     keypad(wTransactionCategoriesMenu->windowptr, TRUE);
 
-    MenuData* m = (MenuData*)malloc(sizeof(MenuData));
+    MenuData* m = malloc(sizeof(MenuData));
     m->options = __APP_TRANSACTION_CATEGORIES_MENU_CHOICES;
     m->option_count = APP_TRANSACTION_CATEGORIES_MENU_CHOICES_NO;
     wTransactionCategoriesMenu->userdata = (void*)m;

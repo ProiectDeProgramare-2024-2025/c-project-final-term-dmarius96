@@ -1,7 +1,7 @@
 #include "windows/windows_viewer.h"
 
 // spawner
-Win* Win_viewer(size_t begin_y, size_t begin_x){
+Win* Win_viewer(const size_t begin_y, const size_t begin_x){
     log_message("Win_viewer: creating viewer window.");
     Win* wViewer = Win_init(NULL, __yMax, __xMax-APP_SIDE_WIDTH, begin_y, begin_x, WIN_ROLE_VIEWER);
     wViewer->draw = Win_viewer_draw;
@@ -10,14 +10,8 @@ Win* Win_viewer(size_t begin_y, size_t begin_x){
     wViewer->dirty = TRUE;
     
     keypad(wViewer->windowptr, TRUE);
-
-    ViewerData* wd = (ViewerData*)malloc(sizeof(ViewerData));
-    wd->header = NULL;
-    wd->header_len = 0;
-    wd->table_chunk_prev = NULL;
-    wd->table_chunk_current = NULL;
-    wd->table_chunk_next = NULL;
-    wViewer->userdata = (void*)wd;
+    
+    wViewer->userdata = (void*)ViewerData_init();
 
     log_message("Win_viewer: OK.");
     return wViewer;
@@ -28,12 +22,8 @@ void Win_viewer_destructor(Win** winptr){
     delwin((*winptr)->windowptr);
     if((*winptr)->label) free((*winptr)->label);
     if((*winptr)->userdata){
-        ViewerData* wd = (ViewerData*)(*winptr)->userdata;
-        if(wd->header) free(wd->header);
-        if(wd->table_chunk_prev) free_table(wd->table_chunk_prev);
-        if(wd->table_chunk_current) free_table(wd->table_chunk_current);
-        if(wd->table_chunk_next) free_table(wd->table_chunk_next);
-        free(wd);
+        ViewerData* vd = (*winptr)->userdata;
+        ViewerData_destroy(&vd);
         (*winptr)->userdata = NULL;
     }
     free(*winptr);
@@ -41,9 +31,9 @@ void Win_viewer_destructor(Win** winptr){
 }
 
 // helper function
-void draw_viewer_background(WINDOW* win, int lines, int cols) {
-    for (int y = 0; y < lines; ++y) {
-        int pair = (y % 2 == 0) ? COLOR_PAIR(1) : COLOR_PAIR(2);
+void draw_viewer_background(WINDOW* win, const size_t lines, const size_t cols) {
+    for (size_t y = 0; y < lines; ++y) {
+        const int pair = (y % 2 == 0) ? COLOR_PAIR(1) : COLOR_PAIR(2);
         wattron(win, pair);
         mvwhline(win, y, 0, ' ', cols);
         wattroff(win, pair);
@@ -51,15 +41,20 @@ void draw_viewer_background(WINDOW* win, int lines, int cols) {
 }
 
 // drawer
-void Win_viewer_draw(Win* winptr){
+void Win_viewer_draw(const Win* winptr){
     werase(winptr->windowptr);
     draw_viewer_background(winptr->windowptr, winptr->height, winptr->width);
     box(winptr->windowptr, 0, 0);
-    if(winptr->label != NULL) mvwprintw(winptr->windowptr, 0, 2, winptr->label);
+    if(winptr->label != NULL) mvwprintw(winptr->windowptr, 0, 2, "%s", winptr->label);
+    const ViewerData* vd = (ViewerData*)winptr->userdata;
+    if(vd->on_focus != MENU_NONE){
+        ViewerTab* focused_tab = vd->tabs[vd->on_focus];
+        mvwprintw(winptr->windowptr, 1, 1, "%s", focused_tab->page_current->rows[0].values[1].textValue);
+    }
 }
 
 // input handler
-void Handle_input_viewer(struct ViewManager* vm, struct Win** winptr, void* context){
+void Handle_input_viewer(ViewManager* vm, Win** winptr, const void* context){
     (void)context;
     switch((*winptr)->keypress){
         case KEY_LEFT:
@@ -69,8 +64,8 @@ void Handle_input_viewer(struct ViewManager* vm, struct Win** winptr, void* cont
             (*winptr)->dirty = TRUE;
             break;
         case KEY_DOWN:
-            (*winptr)->dirty = TRUE;
-            break;
+            // (*winptr)->dirty = TRUE;
+            // break;
         case KEY_UP:
             (*winptr)->dirty = TRUE;
             break;

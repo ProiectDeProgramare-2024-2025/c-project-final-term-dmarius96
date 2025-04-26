@@ -1,6 +1,6 @@
 #include "windows/windows_popup.h"
 
-Win* Win_popup(const char* msg, const char* label, size_t begin_y, size_t begin_x){
+Win* Win_popup(const char* msg, const char* label, const size_t begin_y, const size_t begin_x){
     log_message("Win_popup: spawning popup window with label '%s'.", label);
     Win* wPopup = Win_init(label, 5, strlen(msg)+4, begin_y, begin_x, WIN_ROLE_POPUP);
     wPopup->draw = Win_draw;

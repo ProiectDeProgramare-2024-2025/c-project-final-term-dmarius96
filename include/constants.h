@@ -20,6 +20,15 @@ extern size_t __yMax;
 #define APP_BANNER_LINES            5
 extern const char* __APP_BANNER__[APP_BANNER_LINES];
 
+#define APP_MENU_COUNT  5
+typedef enum {
+    MENU_MAIN,
+    MENU_ACCOUNTS,
+    MENU_TRANSACTIONS,
+    MENU_CURRENCIES,
+    MENU_TRANSACTION_CATEGORIES,
+    MENU_NONE
+} MenuType;
 
 #define APP_MAIN_MENU_CHOICES_NO    6
 extern const char* __APP_MAIN_MENU_CHOICES[APP_MAIN_MENU_CHOICES_NO];

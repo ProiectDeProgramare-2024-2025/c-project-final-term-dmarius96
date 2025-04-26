@@ -4,17 +4,16 @@
 #include "utilities.h"
 #include "log_utils.h"
 
-int stoi(char* str){
+int stoi(const char* str){
     int result = 0;
-    char* p;
-    for(p = str; *p != '\0'; p++){
-        if(*p >= '0' && *p <= '9') result = result*10 + (*p)-'0';
+    for(const char *p = str; *p != '\0'; p++){
+        if(*p >= '0' && *p <= '9') result = result*10 + *p-'0';
     }
     return result;
 }
 
 char* to_upper(const char* str){
-    char* result = (char*)malloc((strlen(str)+1)*sizeof(char));
+    char* result = malloc((strlen(str)+1)*sizeof(char));
     
     size_t i;
 
@@ -46,11 +45,11 @@ int check_date(const char* str){
     }
 
     // check month
-    char* temp = (char*)malloc(3*sizeof(char));
+    char* temp = malloc(3*sizeof(char));
     temp[0] = *(str+5);
     temp[1] = *(str+6);
     temp[2] = '\0';
-    int mo = stoi(temp);
+    const int mo = stoi(temp);
     free(temp);
     if(mo < 1 || mo > 12) {
         log_message("check_date: Date is bad!");
@@ -62,7 +61,7 @@ int check_date(const char* str){
     temp[0] = *(str+8);
     temp[1] = *(str+9);
     temp[2] = '\0';
-    int day = stoi(temp);
+    const int day = stoi(temp);
     free(temp);
     if(day < 1 || day > 31) {
         log_message("check_date: Date is bad!");

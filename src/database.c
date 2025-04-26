@@ -8,7 +8,6 @@
 #include "log_utils.h"
 #include "queries.h"
 #include "utilities.h"
-#include "table_struct.h"
 
 
 // TODO: Replace all table name literals with their respective references from queries.c
@@ -17,7 +16,7 @@
 
 int open_database(sqlite3** db){
     struct stat st;
-    int file_exists = (stat(database_filename, &st) == 0);
+    const int file_exists = stat(database_filename, &st) == 0;
     
     if(!file_exists) log_message("open_database: No database file found. Attempting to create one...");
 
@@ -52,7 +51,7 @@ int table_exists(sqlite3* db, const char* name){
     }
 
     // construct check query
-    char query[] = "SELECT 1 FROM sqlite_master WHERE type='table' AND name=?;";
+    const char query[] = "SELECT 1 FROM sqlite_master WHERE type='table' AND name=?;";
 
     sqlite3_stmt* stmt;
     // if query preparation failed, assume table doesn't exist
@@ -69,7 +68,7 @@ int table_exists(sqlite3* db, const char* name){
     }
 
     // if a row is returned, the table surely exists
-    int exists = (sqlite3_step(stmt) == SQLITE_ROW);
+    const int exists = sqlite3_step(stmt) == SQLITE_ROW;
     sqlite3_finalize(stmt);
 
     if(exists) log_message("table_exists: Exists!");
@@ -181,13 +180,12 @@ int check_schema(sqlite3* db){
         }
 
         // compare retrieved schema with right one
-        if(strncmp(this_schema, queries_create_tables[i], strlen(queries_create_tables[i])-1)) {
+        if(strncmp(this_schema, queries_create_tables[i], strlen(queries_create_tables[i])-1) != 0) {
             log_message("check_schema: Schema is bad!");
             return 0;
-        }else{
-            log_message("check_schema: Schema of table '%s' OK.", table_names[i]);
         }
 
+        log_message("check_schema: Schema of table '%s' OK.", table_names[i]);
         free(this_schema);
     }
 
@@ -283,7 +281,7 @@ int currency_exists(sqlite3* db, const char* raw_currency){
         return 0;
     }
 
-    int result = sqlite3_column_int(stmt, 0);
+    const int result = sqlite3_column_int(stmt, 0);
 
     if(result) log_message("currency_exists: Exists!");
     else log_message("currency_exists: Does not exist!");
@@ -417,7 +415,7 @@ int transaction_category_exists(sqlite3* db, const char* name){
         return 0;
     }
 
-    int result = sqlite3_column_int(stmt, 0);
+    const int result = sqlite3_column_int(stmt, 0);
 
     sqlite3_free(query);
     sqlite3_finalize(stmt);
@@ -539,7 +537,7 @@ int account_exists(sqlite3* db, const char* name){
         return 0;
     }
 
-    int result = sqlite3_column_int(stmt, 0);
+    const int result = sqlite3_column_int(stmt, 0);
 
     sqlite3_free(query);
     sqlite3_finalize(stmt);
@@ -554,7 +552,7 @@ int insert_account(
     const char* name,
     const char* creation_date,
     const char* raw_currency,
-    float ballance,
+    const float ballance,
     const char* IBAN
 ){
     log_message("insert_account: Inserting account '%s'.", name);
@@ -622,7 +620,7 @@ int insert_account(
     return 0;
 }
 
-int remove_account_id(sqlite3* db, unsigned int id){
+int remove_account_id(sqlite3* db, const unsigned int id){
     log_message("remove_account_id: Removing account with ID '%u'.", id);
     // is db open?
     if(!db) {
@@ -752,11 +750,11 @@ void fetch_accounts(sqlite3* db){
     printf("----|--------------------|------------|----------|---------|--------------------------|\n");
 
     while(sqlite3_step(stmt) == SQLITE_ROW){
-        int id = sqlite3_column_int(stmt, 0);
+        const int id = sqlite3_column_int(stmt, 0);
         const char* name = (const char*)sqlite3_column_text(stmt, 1);
         const char* date = (const char*)sqlite3_column_text(stmt, 2);
         const char* curr = (const char*)sqlite3_column_text(stmt, 3);
-        float balance = sqlite3_column_double(stmt, 4);
+        const float balance = (float)sqlite3_column_double(stmt, 4);
         const char* IBAN = (const char*)sqlite3_column_text(stmt, 5);
 
         printf(" %-2d | %-18s | %-10s | %-8s | %-7.2f | %-24s |\n", id, name, date, curr, balance, IBAN);
@@ -866,7 +864,7 @@ void fetch_transactions(sqlite3* db){
         const char* date = (const char*)sqlite3_column_text(stmt, 1);
         const char* name = (const char*)sqlite3_column_text(stmt, 2);
         const char* categ = (const char*)sqlite3_column_text(stmt, 3);
-        float amt = sqlite3_column_double(stmt, 4);
+        const float amt = (float)sqlite3_column_double(stmt, 4);
         const char* desc = (const char*)sqlite3_column_text(stmt, 5);
 
         printf(" %-2d | %-10s | %-18s | %-8s | %-8.2f | %-24s |\n", id, date, name, categ, amt, desc);

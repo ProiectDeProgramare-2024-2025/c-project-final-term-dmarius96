@@ -1,8 +1,6 @@
 #ifndef APP_LOG_UTILS_H
 #define APP_LOG_UTILS_H
 
-#include <stdarg.h>
-
 /*
  *      Not properly opening the log file may lead to memory leaks.
  *      If a function does not detect the log file open, it will simply exit,

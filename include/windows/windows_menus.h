@@ -12,7 +12,7 @@ typedef struct {
 /********DRAWING FUNCTIONS**********/
 /***********************************/
 
-void Win_menu_draw(Win* winptr);
+void Win_menu_draw(const Win* winptr);
 
 void Win_menu_destructor(Win** winptr);
 
@@ -20,15 +20,15 @@ void Win_menu_destructor(Win** winptr);
 /*****INPUT HANDLING FUNCTIONS******/
 /***********************************/
 
-void Handle_input_menu_main(struct ViewManager* vm, struct Win** winptr, void* context);
+void Handle_input_menu_main(ViewManager* vm, Win** winptr, const void* context);
 
-void Handle_input_menu_accounts(struct ViewManager* vm, struct Win** winptr, void* context);
+void Handle_input_menu_accounts(ViewManager* vm, Win** winptr, const void* context);
 
-void Handle_input_menu_transactions(struct ViewManager* vm, struct Win** winptr, void* context);
+void Handle_input_menu_transactions(ViewManager* vm, Win** winptr, const void* context);
 
-void Handle_input_menu_currencies(struct ViewManager* vm, struct Win** winptr, void* context);
+void Handle_input_menu_currencies(ViewManager* vm, Win** winptr, const void* context);
 
-void Handle_input_menu_transaction_categories(struct ViewManager* vm, struct Win** winptr, void* context);
+void Handle_input_menu_transaction_categories(ViewManager* vm, Win** winptr, const void* context);
 
 /***********************************/
 /*******SPAWNING FUNCTIONS**********/

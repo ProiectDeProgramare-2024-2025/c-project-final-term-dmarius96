@@ -11,7 +11,7 @@ void ViewManager_set(ViewManager* vm, WinRole role, Win* winptr);
 
 void ViewManager_focus(ViewManager* vm, WinRole role);
 
-void ViewManager_redraw_all(ViewManager* vm);
+void ViewManager_redraw_all(const ViewManager* vm);
 
 void ViewManager_destroy(ViewManager** vm);
 

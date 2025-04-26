@@ -1,5 +1,4 @@
 #include <string.h>
-#include <sqlite3.h>
 
 #include "interactive.h"
 #include "noninteractive.h"
@@ -7,7 +6,7 @@
 #include "database.h"
 #include "constants.h"
 
-int main(int argv, char* argc[]){
+int main(const int argv, char* argc[]){
 
     log_init();
     open_database(&__db);
@@ -27,6 +26,4 @@ int main(int argv, char* argc[]){
 
     close_database(__db);
     log_cleanup();
-
-    return 0;
 }

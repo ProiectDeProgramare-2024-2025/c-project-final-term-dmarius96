@@ -3,7 +3,7 @@
 ViewManager* ViewManager_init(){
     log_message("ViewManager: initializing view manager.");
     
-    ViewManager* vm = (ViewManager*)malloc(sizeof(ViewManager));
+    ViewManager* vm = malloc(sizeof(ViewManager));
     if(vm == NULL){
         log_error("ViewManager: failed to allocate memory for view manager.");
         return NULL;
@@ -17,7 +17,7 @@ ViewManager* ViewManager_init(){
     return vm;
 }
 
-void ViewManager_set(ViewManager* vm, WinRole role, Win* winptr){
+void ViewManager_set(ViewManager* vm, const WinRole role, Win* winptr){
     const char* r;
     switch (role){
     case WIN_ROLE_BANNER:
@@ -45,7 +45,7 @@ void ViewManager_set(ViewManager* vm, WinRole role, Win* winptr){
     log_message("ViewManager: set window with label '%s' in role '%s'.", winptr->label, r);
 }
 
-void ViewManager_focus(ViewManager* vm, WinRole role){
+void ViewManager_focus(ViewManager* vm, const WinRole role){
     const char* r;
     switch (role){
     case WIN_ROLE_BANNER:
@@ -73,7 +73,7 @@ void ViewManager_focus(ViewManager* vm, WinRole role){
     log_message("ViewManager: set focus on window with role '%s'.", r);
 }
 
-void ViewManager_redraw_all(ViewManager* vm){
+void ViewManager_redraw_all(const ViewManager* vm){
     log_message("ViewManager: redrawing all windows.");
     for(size_t i = 0; i < ROLE_COUNT; ++i) {
         if(vm->windows[i] != NULL) {
@@ -94,7 +94,7 @@ void ViewManager_destroy(ViewManager** vm){
 
 void ViewManager_listen(ViewManager* vm, InputContext* ctx){
     Win* focused_window = NULL;
-    while(*(ctx->loop)){
+    while(*ctx->loop){
         focused_window = vm->windows[vm->focused];
         focused_window->keypress = wgetch(focused_window->windowptr);
         if(focused_window && focused_window->handle_input){

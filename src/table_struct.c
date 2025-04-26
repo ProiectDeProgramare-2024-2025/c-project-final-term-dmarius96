@@ -77,13 +77,14 @@ TableData* fetch_chunk(sqlite3* db, const char* query){
     while(sqlite3_step(stmt) == SQLITE_ROW){
         if(table->numRows >= capacity){
             capacity += 10;
-            table->rows = realloc(table->rows, capacity * sizeof(Row));
-            if(table->rows == NULL){
-                log_error("fetch_table: Table reallocation failed.");
-                sqlite3_finalize(stmt);
+            Row* temp = realloc(table->rows, capacity * sizeof(Row));
+            if(temp == NULL) {
+                log_error("fetch_table: Memory allocation failed.");
                 free_table(table);
+                sqlite3_finalize(stmt);
                 return NULL;
             }
+            table->rows = temp;
         }
 
         Row* row = &table->rows[table->numRows];

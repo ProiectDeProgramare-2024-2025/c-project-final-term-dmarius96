@@ -15,9 +15,10 @@ typedef enum {
     WIN_ROLE_POPUP
 } WinRole;
 
-struct ViewManager;
+typedef struct ViewManager ViewManager;
+typedef struct Win Win;
 
-typedef struct Win{
+struct Win{
     WINDOW* windowptr;
     WinRole role;
     char* label;
@@ -27,12 +28,12 @@ typedef struct Win{
     size_t height;
     size_t keypress;
     size_t highlight;
-    void (*draw)(struct Win*);
-    void (*handle_input)(struct ViewManager*, struct Win**, void* context);
-    void (*destructor)(struct Win**);
+    void (*draw)(const Win*);
+    void (*handle_input)(ViewManager*, Win**, const void* context);
+    void (*destructor)(Win**);
     void* userdata;
     bool dirty;
-} Win;
+};
 
 typedef struct {
     int* loop;
@@ -54,7 +55,7 @@ Win* Win_init(
     WinRole role
 );
 
-void Win_draw(Win* winptr);
+void Win_draw(const Win* winptr);
 
 /*******************************************************/
 
