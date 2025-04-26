@@ -1,0 +1,35 @@
+#ifndef APP_VIEW_MANAGER_H
+#define APP_VIEW_MANAGER_H
+
+#include "windows.h"
+
+typedef struct {
+    int* loop;
+} InputContext;
+
+typedef struct ViewManager{
+    Win* windows[ROLE_COUNT];
+    WinRole focused;
+    Win* menu_stack[MENU_STACK_MAX];
+    size_t menu_stack_top;
+} ViewManager;
+
+/*******************************************************/
+
+ViewManager* ViewManager_init();
+
+void ViewManager_set(ViewManager* vm, WinRole role, Win* winptr);
+
+void ViewManager_focus(ViewManager* vm, WinRole role);
+
+void ViewManager_redraw_all(ViewManager* vm);
+
+void ViewManager_destroy(ViewManager** vm);
+
+void ViewManager_listen(ViewManager* vm, InputContext* ctx);
+
+void ViewManager_push_menu(ViewManager* vm, Win* menu);
+
+Win* ViewManager_pop_menu(ViewManager* vm);
+
+#endif
