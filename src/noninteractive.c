@@ -4,8 +4,8 @@
 #include "noninteractive.h"
 #include "flags.h"
 
-void runtime_noninteractive(int argv, char* argc[]){
-    
+void runtime_noninteractive(const int argv, char* argc[]){
+
     if(argv == 1){
         display_help();
         return;

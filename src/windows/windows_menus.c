@@ -1,35 +1,55 @@
 #include "windows/windows_menus.h"
 #include "queries.h"
+#include "log_utils.h"
 
 /***********************************/
 /********DRAWING FUNCTIONS**********/
 /***********************************/
 
 void Win_menu_draw(const Win* winptr){
-    const MenuData* m = winptr->userdata;
+    if (winptr->label)  log_message("Win_menu: drawing menu with label '%s'.", winptr->label);
+    else                log_message("Win_menu: drawing menu with anonymous label.");
 
-    box(winptr->windowptr, 0, 0);
-    if (winptr->label != NULL) mvwprintw(winptr->windowptr, 0, 2, winptr->label);
+    const MenuData* m = winptr->userdata;
+    if (m == NULL) {
+        log_error("Win_menu: menu data is NULL.");
+        return;
+    }
+
+    if(box(winptr->windowptr, 0, 0)) log_warning("Win_menu: failed to draw border.");
+    if (winptr->label != NULL && mvwprintw(winptr->windowptr, 0, 2, winptr->label)) {
+        log_error("Win_menu: label is not NULL; something went wrong while printing the label.");
+        return;
+    }
 
     const size_t n = m->option_count;
 
     for (size_t i = 0; i < n-1; ++i) {
         if (i == winptr->highlight) wattron(winptr->windowptr, A_REVERSE);
-        mvwprintw(winptr->windowptr, ((int)i + 1) * 2, (int)(winptr->width - strlen(m->options[i])) / 2, m->options[i]);
+        if (mvwprintw(winptr->windowptr, ((int)i + 1) * 2, (int)(winptr->width - strlen(m->options[i])) / 2, m->options[i]))
+            log_error("Win_menu: something went wrong while printing the menu data.");
         wattroff(winptr->windowptr, A_REVERSE);
     }
 
     if(n-1 == winptr->highlight) wattron(winptr->windowptr, A_REVERSE);
-    mvwprintw(winptr->windowptr, (int)winptr->height-3, (int)(APP_SIDE_WIDTH - strlen(m->options[n-1])) / 2, m->options[n-1]);
+    if (mvwprintw(winptr->windowptr, (int)winptr->height-3, (int)(APP_SIDE_WIDTH - strlen(m->options[n-1])) / 2, m->options[n-1]))
+        log_error("Win_menu: something went wrong while printing the menu data.");
     wattroff(winptr->windowptr, A_REVERSE);
+
+    log_message("Win_menu: OK.");
 }
 
 void Win_menu_destructor(Win** winptr){
+    if ((*winptr)->label)   log_message("Win_menu: destroying menu window with label '%s'.", (*winptr)->label);
+    else                    log_message("Win_menu: destroying menu window with anonymous label.");
+
     delwin((*winptr)->windowptr);
     if((*winptr)->label) free((*winptr)->label);
     if((*winptr)->userdata) free((*winptr)->userdata);
     free(*winptr);
     *winptr = NULL;
+
+    log_message("Win_menu: OK.");
 }
 
 /***********************************/
@@ -37,8 +57,18 @@ void Win_menu_destructor(Win** winptr){
 /***********************************/
 
 void Handle_input_menu_main(ViewManager* vm, Win** winptr, const void* context){
-    MenuData* data = (*winptr)->userdata;
-    if(!data) return;
+    log_message("Handle_input_menu: now handling input for main menu.");
+
+    const MenuData* data = (*winptr)->userdata;
+    if(data == NULL) {
+        log_error("Handle_input_menu: menu data is NULL.");
+        return;
+    }
+
+    if (context == NULL) {
+        log_error("Handle_input_menu: context is NULL.");
+        return;
+    }
     const InputContext* ctx = context;
 
     switch((*winptr)->keypress){
@@ -51,23 +81,40 @@ void Handle_input_menu_main(ViewManager* vm, Win** winptr, const void* context){
             (*winptr)->dirty = TRUE;
             break;
         case KEY_RIGHT: {
-            // shift focus to viewer window
+            log_message("Handle_input_menu: shifting focus to viewer window.");
             ViewManager_focus(vm, WIN_ROLE_VIEWER);
             *winptr = vm->windows[vm->focused];
-            (*winptr)->dirty = TRUE;
             break;
         }
-        case ENTER:
+        case ENTER:{
+            Win* wViewer = vm->windows[WIN_ROLE_VIEWER];
+            if (wViewer == NULL) {
+                log_error("Handle_input_menu: no viewer window found.");
+                return;
+            }
+
+            ViewerData* vd = wViewer->userdata;
+            if (vd == NULL) {
+                log_error("Handle_input_menu: viewer data is NULL.");
+                return;
+            }
+
             switch((*winptr)->highlight){
-                // each of these cases should shift the focus in ViewManager* vm
                 case 0: {
-                    // accounts
-                    
-                    // populate viewer with data from Accounts table
-                    Win* wViewer = vm->windows[WIN_ROLE_VIEWER];
-                    ViewerData* vd = wViewer->userdata;
-                    vd->on_focus = MENU_ACCOUNTS;
-                    ViewerTab_populate_tab(&vd->tabs[vd->on_focus], 0, wViewer->height, table_names[2], queries_fetch_tables[2]);
+                    log_message("Handle_input_menu: chosen menu - Accounts.");
+                    if(vd->tabs[TABLE_ACCOUNTS] == NULL) {
+                        log_message("Handle_input_menu: no data for menu Accounts.");
+                        ViewerTab_populate_tab(&vd->tabs[TABLE_ACCOUNTS], wViewer->height, table_names[2], queries_fetch_tables[2]);
+                    } else {
+                        log_message("Handle_input_menu: data for menu Accounts exists.");
+                    }
+                    vd->on_focus = TABLE_ACCOUNTS;
+
+                    if(vd->tabs[vd->on_focus]->page_current->numRows == 0){
+                        log_warning("Handle_input_menu: the Accounts table is empty.");
+                        popup("There is no data!", "| [!] Error |", (__yMax-5)/2, (__xMax-10)/2, vm);
+                        break;
+                    }
                     wViewer->dirty = TRUE;
 
                     // set new menu
@@ -77,57 +124,95 @@ void Handle_input_menu_main(ViewManager* vm, Win** winptr, const void* context){
                     break;
                 }
                 case 1: {
-                    // transactions
-                    Win* wViewer = vm->windows[WIN_ROLE_VIEWER];
-                    werase(wViewer->windowptr);
-                    mvwprintw(wViewer->windowptr, 2, 2, "Now in menu: transactions");
-                    wViewer->draw(wViewer);
+                    log_message("Handle_input_menu: chosen menu - Transactions.");
+                    if(vd->tabs[TABLE_TRANSACTIONS] == NULL) {
+                        log_message("Handle_input_menu: no data for menu Transactions.");
+                        ViewerTab_populate_tab(&vd->tabs[TABLE_TRANSACTIONS], wViewer->height, table_names[3], queries_fetch_tables[3]);
+                    } else {
+                        log_message("Handle_input_menu: data for menu Transactions exists.");
+                    }
+                    vd->on_focus = TABLE_TRANSACTIONS;
+
+                    if(vd->tabs[vd->on_focus]->page_current->numRows == 0){
+                        log_warning("Handle_input_menu: the Transactions table is empty.");
+                        popup("There is no data!", "| [!] Error |", (__yMax-5)/2, (__xMax-10)/2, vm);
+                        break;
+                    }
+                    wViewer->dirty = TRUE;
+
+                    // set new menu
                     ViewManager_push_menu(vm, *winptr);
                     ViewManager_set(vm, WIN_ROLE_MENU, Win_menu_transactions((*winptr)->begin_y, (*winptr)->begin_x));
-                    *winptr = vm->windows[vm->focused];
+                    *winptr = vm->windows[WIN_ROLE_VIEWER];
                     break;
                 }
                 case 2: {
-                    // currencies
-                    Win* wViewer = vm->windows[WIN_ROLE_VIEWER];
-                    werase(wViewer->windowptr);
-                    mvwprintw(wViewer->windowptr, 2, 2, "Now in menu: currencies");
-                    wViewer->draw(wViewer);
+                    log_message("Handle_input_menu: chosen menu - Currencies.");
+                    if(vd->tabs[TABLE_CURRENCIES] == NULL) {
+                        log_message("Handle_input_menu: no data for menu Currencies.");
+                        ViewerTab_populate_tab(&vd->tabs[TABLE_CURRENCIES], wViewer->height, table_names[0], queries_fetch_tables[0]);
+                    } else {
+                        log_message("Handle_input_menu: data for menu Currencies exists.");
+                    }
+                    vd->on_focus = TABLE_CURRENCIES;
+
+                    if(vd->tabs[vd->on_focus]->page_current->numRows == 0){
+                        log_warning("Handle_input_menu: the Currencies table is empty.");
+                        popup("There is no data!", "| [!] Error |", (__yMax-5)/2, (__xMax-10)/2, vm);
+                        break;
+                    }
+                    wViewer->dirty = TRUE;
+
+                    // set new menu
                     ViewManager_push_menu(vm, *winptr);
                     ViewManager_set(vm, WIN_ROLE_MENU, Win_menu_currencies((*winptr)->begin_y, (*winptr)->begin_x));
-                    *winptr = vm->windows[vm->focused];
+                    *winptr = vm->windows[WIN_ROLE_VIEWER];
                     break;
                 }
                 case 3: {
                     // transaction categories
-                    Win* wViewer = vm->windows[WIN_ROLE_VIEWER];
-                    werase(wViewer->windowptr);
-                    mvwprintw(wViewer->windowptr, 2, 2, "Now in menu: transaction categories");
-                    wViewer->draw(wViewer);
+                    log_message("Handle_input_menu: chosen menu - TransactionCategories.");
+                    if(vd->tabs[TABLE_TRANSACTION_CATEGORIES] == NULL) {
+                        log_message("Handle_input_menu: no data for menu TransactionCategories.");
+                        ViewerTab_populate_tab(&vd->tabs[TABLE_TRANSACTION_CATEGORIES], wViewer->height, table_names[1], queries_fetch_tables[1]);
+                    } else {
+                        log_message("Handle_input_menu: data for menu TransactionCategories exists.");
+                    }
+                    vd->on_focus = TABLE_TRANSACTION_CATEGORIES;
+
+                    if(vd->tabs[vd->on_focus]->page_current->numRows == 0){
+                        log_warning("Handle_input_menu: the TransactionCategories table is empty.");
+                        popup("There is no data!", "| [!] Error |", (__yMax-5)/2, (__xMax-10)/2, vm);
+                        break;
+                    }
+                    wViewer->dirty = TRUE;
+
+                    // set new menu
                     ViewManager_push_menu(vm, *winptr);
                     ViewManager_set(vm, WIN_ROLE_MENU, Win_menu_transaction_categories((*winptr)->begin_y, (*winptr)->begin_x));
-                    *winptr = vm->windows[vm->focused];
+                    *winptr = vm->windows[WIN_ROLE_VIEWER];
                     break;
                 }
                 case 4: {
                     // options
-                    Win* wPopup = Win_popup("Not implemented!", "| [!] Error |", (__yMax-5)/2, (__xMax-10)/2);
-                    Win_draw(wPopup);
-                    wrefresh(wPopup->windowptr);
-                    getch();
-                    wPopup->destructor(&wPopup);
-                    ViewManager_redraw_all(vm);
+                    log_message("Handle_input_menu: chosen menu - Options.");
+                    popup("Not implemented!", "| [!] Error |", (__yMax-5)/2, (__xMax-10)/2, vm);
                     break;
                 }
                 case 5:
+                    log_message("Handle_input_menu: chosen - Exit; breaking listener.");
                     *ctx->loop = 0;
                     break;
                 default:
                     break;
             }
             break;
-        default: ;
+        }
+        default:
+            break;
     }
+
+    log_message("Handle_input_menu: OK.");
 }
 
 void Handle_input_menu_accounts(ViewManager* vm, Win** winptr, const void* context){

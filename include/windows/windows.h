@@ -4,7 +4,6 @@
 #include <ncurses.h>
 #include <stdlib.h>
 #include <string.h>
-#include "log_utils.h"
 #include "constants.h"
 #include "table_struct.h"
 

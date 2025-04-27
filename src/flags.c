@@ -1,7 +1,9 @@
 #include <stdio.h>
 #include "flags.h"
+#include "log_utils.h"
 
 void display_help(){
+    log_message("display_help: OK.");
 
     printf("\n");
     printf("       _____                                        ___       \n");

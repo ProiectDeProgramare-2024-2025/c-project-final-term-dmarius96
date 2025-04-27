@@ -1,4 +1,5 @@
 #include "windows/view_manager.h"
+#include "log_utils.h"
 
 ViewManager* ViewManager_init(){
     log_message("ViewManager: initializing view manager.");
@@ -66,8 +67,7 @@ void ViewManager_focus(ViewManager* vm, const WinRole role){
     }
 
     vm->focused = role;
-    // logic here
-    Win_draw(vm->windows[role]);
+    vm->windows[role]->draw(vm->windows[role]);
     wrefresh(vm->windows[vm->focused]->windowptr);
 
     log_message("ViewManager: set focus on window with role '%s'.", r);
@@ -78,7 +78,8 @@ void ViewManager_redraw_all(const ViewManager* vm){
     for(size_t i = 0; i < ROLE_COUNT; ++i) {
         if(vm->windows[i] != NULL) {
             vm->windows[i]->draw(vm->windows[i]);
-            wrefresh(vm->windows[i]->windowptr);
+            if(wrefresh(vm->windows[i]->windowptr))
+                log_error("ViewManager: failed to refresh window.");
         }
     }
     log_message("ViewManager: OK.");
@@ -92,15 +93,20 @@ void ViewManager_destroy(ViewManager** vm){
     log_message("ViewManager: OK.");
 }
 
-void ViewManager_listen(ViewManager* vm, InputContext* ctx){
+void ViewManager_listen(ViewManager* vm, const InputContext* ctx){
+    if (*ctx->loop) log_message("ViewManager: now listening for input.");
+    else return;
+
     Win* focused_window = NULL;
     while(*ctx->loop){
         focused_window = vm->windows[vm->focused];
         focused_window->keypress = wgetch(focused_window->windowptr);
+        log_message("ViewManager: received key %lu.", focused_window->keypress);
         if(focused_window && focused_window->handle_input){
             focused_window->handle_input(vm, &focused_window, ctx);
 
             if(focused_window->dirty){
+                log_message("ViewManager: focused window is dirty - redrawing.");
                 if(focused_window->draw){
                     werase(focused_window->windowptr);
                     focused_window->draw(focused_window);
@@ -110,13 +116,24 @@ void ViewManager_listen(ViewManager* vm, InputContext* ctx){
             }
         }
     }
+    log_message("ViewManager: stopped listening for input.");
 }
 
 void ViewManager_push_menu(ViewManager* vm, Win* menu){
-    if(vm->menu_stack_top < MENU_STACK_MAX) vm->menu_stack[vm->menu_stack_top++] = menu;
+    log_message("ViewManager: pushing menu '%s' to stack.", menu->label);
+    if(vm->menu_stack_top < MENU_STACK_MAX) {
+        vm->menu_stack[vm->menu_stack_top++] = menu;
+        log_message("ViewManager: OK.");
+        return;
+    }
+    log_error("ViewManager: not enough space on the menu stack.");
 }
 
 Win* ViewManager_pop_menu(ViewManager* vm){
-    if(vm->menu_stack_top > 0) return vm->menu_stack[--vm->menu_stack_top];
+    if(vm->menu_stack_top > 0) {
+        log_message("ViewManager: popping menu '%s' from stack.", vm->menu_stack[--vm->menu_stack_top]->label);
+        return vm->menu_stack[vm->menu_stack_top];
+    }
+    log_error("ViewManager: no menu to pop.");
     return NULL;
 }

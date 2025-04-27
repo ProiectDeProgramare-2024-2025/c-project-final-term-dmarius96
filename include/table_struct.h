@@ -22,13 +22,13 @@ typedef union{
 typedef struct{
     CellValue* values;
     CellType* types;
-    int numColumns;
+    size_t numColumns;
 } Row;
 
 typedef struct TableData {
     Row* rows;
-    int numRows;
-    int numColumns;
+    size_t numRows;
+    size_t numColumns;
 } TableData;
 
 /********************************************************/

@@ -7,4 +7,6 @@ Win* Win_popup(const char* msg, const char* label, size_t begin_y, size_t begin_
 
 void Win_popup_destructor(Win** winptr);
 
+void popup(const char* message, const char* label, size_t begin_y, size_t begin_x, const ViewManager* vm);
+
 #endif

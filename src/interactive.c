@@ -8,9 +8,9 @@
 void runtime_interactive(){
 
     if(initscr() == stdscr) {
-        log_message("Initialized screen.");
+        log_message("runtime_interactive: Initialized screen.");
     }else{
-        log_error("Failed to initialize screen. Quitting.");
+        log_error("runtime_interactive: Failed to initialize screen. Quitting.");
         return;
     }
 
@@ -25,6 +25,8 @@ void runtime_interactive(){
     refresh();
 
     getmaxyx(stdscr, __yMax, __xMax);
+
+    log_message("runtime_interactive: Set up screen settings.");
 
     // spawn all base windows
     Win* wBanner = Win_banner(0, 0);

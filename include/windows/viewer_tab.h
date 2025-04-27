@@ -5,10 +5,10 @@
 #include "table_struct.h"
 
 typedef struct {
-    char* label;
-    size_t label_len;
-    size_t columns;
+    char* header;
+    size_t header_len;
     size_t lines;
+    size_t highlight;
     TableData* page_prev;
     TableData* page_current;
     TableData* page_next;
@@ -21,12 +21,11 @@ typedef struct {
 } ViewerData;
 
 // initialize a tab
-ViewerTab* ViewerTab_init(size_t columns, size_t lines);
+ViewerTab* ViewerTab_init(size_t lines);
 
 // populate a tab with data
 void ViewerTab_populate_tab(
     ViewerTab** tabptr,
-    size_t columns,
     size_t lines,
     const char* table_name,
     const char* fetch_query

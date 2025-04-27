@@ -15,7 +15,7 @@ void ViewManager_redraw_all(const ViewManager* vm);
 
 void ViewManager_destroy(ViewManager** vm);
 
-void ViewManager_listen(ViewManager* vm, InputContext* ctx);
+void ViewManager_listen(ViewManager* vm, const InputContext* ctx);
 
 void ViewManager_push_menu(ViewManager* vm, Win* menu);
 
