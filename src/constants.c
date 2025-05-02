@@ -51,3 +51,12 @@ const char* __APP_TRANSACTION_CATEGORIES_MENU_CHOICES[] = {
 
     " Back "
 };
+
+const char* __APP_ACCOUNTS_MENU_MOD_CHOICES[] = {
+    " By ID ",
+    " By name ",
+    " By creation date ",
+    " By IBAN ",
+
+    " Back "
+};

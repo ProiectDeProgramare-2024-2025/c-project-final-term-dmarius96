@@ -12,6 +12,7 @@ ViewerTab* ViewerTab_init(const size_t lines){
     vt->header_len = 0;
     vt->lines = lines;
     vt->highlight = 0;
+    vt->offset = 0;
     vt->page_prev = NULL;
     vt->page_current = NULL;
     vt->page_next = NULL;
@@ -19,7 +20,7 @@ ViewerTab* ViewerTab_init(const size_t lines){
     return vt;
 }
 
-// populate a tab with data
+// (re)populate a tab with data
 void ViewerTab_populate_tab(
     ViewerTab** tabptr,
     const size_t lines,
@@ -27,18 +28,19 @@ void ViewerTab_populate_tab(
     const char* fetch_query)
 {
     log_message("ViewerTab: populating tab with data from table '%s'.", table_name);
-    if(*tabptr == NULL) *tabptr = ViewerTab_init(lines);
+    if(*tabptr != NULL) ViewerTab_destroy(tabptr);
+    *tabptr = ViewerTab_init(lines);
     // tabptr->label = NULL;
     // tabptr->label_len = 0;
     // tabptr->page_prev = NULL;
-    TableData* helper = fetch_table_chunk(__db, table_name, fetch_query, 0, lines-1);
+    TableData* helper = fetch_table_chunk(__db, table_name, fetch_query, (*tabptr)->offset, lines-1);
     if (helper == NULL) {
         log_error("ViewerTab: failed to fetch middle page.");
         return;
     }
     (*tabptr)->page_current = helper;
 
-    helper = fetch_table_chunk(__db, table_name, fetch_query, lines, lines);
+    helper = fetch_table_chunk(__db, table_name, fetch_query, (*tabptr)->offset+lines, lines);
     if (helper == NULL) {
         log_error("ViewerTab: failed to fetch next page.");
         return;
@@ -69,7 +71,11 @@ void ViewerTab_destroy(ViewerTab** tabptr){
 ViewerData* ViewerData_init(){
     log_message("ViewerData: allocating memory for viewer window data.");
     ViewerData* vd = malloc(sizeof(ViewerData));
-    vd->on_focus = MENU_NONE;
+    if (vd == NULL) {
+        log_error("ViewerData: failed to allocate memory for viewer data.");
+        return NULL;
+    }
+    vd->on_focus = MENU_MAIN;
     for(size_t i = 0; i < APP_MENU_COUNT; ++i) vd->tabs[i] = NULL;
     log_message("ViewerData: OK.");
     return vd;

@@ -2,7 +2,6 @@
 #define APP_WINDOWS_VIEWER_H
 
 #include "windows.h"
-#include "viewer_tab.h"
 
 Win* Win_viewer(size_t begin_y, size_t begin_x);
 

@@ -9,6 +9,7 @@ typedef struct {
     size_t header_len;
     size_t lines;
     size_t highlight;
+    size_t offset;
     TableData* page_prev;
     TableData* page_current;
     TableData* page_next;

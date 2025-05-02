@@ -586,7 +586,7 @@ int insert_account(
 
     // ensure proper IBAN
     const char* IBAN_proper = NULL;
-    if(!IBAN){
+    if(!IBAN || IBAN[0] == '\0'){
         log_message("insert_account: No IBAN provided; defaulting to 'N/A'.");
         IBAN_proper = "N/A";
     }else{
@@ -599,7 +599,7 @@ int insert_account(
         "NULL,"     // ID
         "%Q,"       // accountName
         "%s,"       // dateCreated
-        "(SELECT 1 FROM Currencies WHERE currencyName = %Q),"   // currencyType
+        "(SELECT currencyID FROM Currencies WHERE currencyName = %Q),"   // currencyType
         "%.2f,"     // accountBallance
         "%Q);",     // IBAN
         name, date_proper, currency, ballance, IBAN_proper
@@ -772,7 +772,7 @@ int insert_transaction(
     const char* transaction_date,
     const char* account_name,
     const char* transaction_category,
-    float amount,
+    const float amount,
     const char* description
 ){
     log_message("insert_transaction: Inserting new transaction.");

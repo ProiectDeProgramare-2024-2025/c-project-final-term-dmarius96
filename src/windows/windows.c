@@ -1,6 +1,5 @@
 #include "windows/windows.h"
 #include "database.h"
-#include "queries.h"
 
 /***********************************/
 /*******GENERIC Win FUNCTIONS*******/
@@ -49,11 +48,16 @@ void Win_draw(const Win* winptr){
     if(winptr->label) log_message("Win_draw: drawing window with label '%s'.", winptr->label);
     else              log_message("Win_draw: drawing window with anonymous label.");
 
+    int x, y;
+    getyx(winptr->windowptr, y, x);
+
     if(box(winptr->windowptr, 0, 0)) log_warning("Win_draw: failed to draw border.");
     if(winptr->label != NULL) {
         if (mvwprintw(winptr->windowptr, 0, 2, "%s", winptr->label))
             log_warning("Win_draw: something went wrong while printing the label.");
     }
+
+    wmove(winptr->windowptr, y, x);
 
     log_message("Win_draw: OK.");
 }
